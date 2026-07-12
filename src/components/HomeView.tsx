@@ -12,7 +12,71 @@ const metricLabel = (h: Habit, value: number) =>
 
 const FREE_INPUT = '__free__'
 
-/** 筋トレの記録フォーム: 種目を選ぶと前回のセット×回数×重量が入った状態で開く */
+interface SetRow {
+  weight: string
+  reps: string
+}
+
+/** 前回のエントリからセット行のプリフィルを作る(セット詳細がない旧データは代表値で展開) */
+const rowsFromEntry = (e: Entry | undefined): SetRow[] => {
+  if (e?.setsDetail?.length) {
+    return e.setsDetail.map((s) => ({
+      weight: s.weight != null ? String(s.weight) : '',
+      reps: String(s.reps),
+    }))
+  }
+  if (e) {
+    const n = Math.max(1, e.sets ?? 3)
+    return Array.from({ length: n }, () => ({
+      weight: e.weight != null ? String(e.weight) : '',
+      reps: String(e.reps ?? 10),
+    }))
+  }
+  return Array.from({ length: 3 }, () => ({ weight: '', reps: '10' }))
+}
+
+/** セット間の休憩タイマー(終了時にバイブレーション) */
+function RestTimer() {
+  const [remain, setRemain] = useState<number | null>(null)
+  useEffect(() => {
+    if (remain == null || remain <= 0) return
+    const t = setTimeout(() => setRemain(remain - 1), 1000)
+    return () => clearTimeout(t)
+  }, [remain])
+  useEffect(() => {
+    if (remain === 0) navigator.vibrate?.([200, 100, 200])
+  }, [remain])
+
+  if (remain == null) {
+    return (
+      <div className="rest-timer">
+        <span>休憩:</span>
+        {[60, 90, 120].map((s) => (
+          <button key={s} className="chip" onClick={() => setRemain(s)}>
+            {Math.floor(s / 60)}:{String(s % 60).padStart(2, '0')}
+          </button>
+        ))}
+      </div>
+    )
+  }
+  return (
+    <div className="rest-timer">
+      <span className={`rest-count${remain === 0 ? ' done' : ''}`}>
+        {remain === 0
+          ? '休憩おわり! 💪'
+          : `残り ${Math.floor(remain / 60)}:${String(remain % 60).padStart(2, '0')}`}
+      </span>
+      <button className="chip" onClick={() => setRemain(null)}>
+        リセット
+      </button>
+    </div>
+  )
+}
+
+/**
+ * 筋トレの記録フォーム(Burnfit式):
+ * セットごとに重量×回数を個別に記録。前回の記録がプリフィルされ、±ボタンで素早く調整できる。
+ */
 function StrengthLogger({
   habit,
   entries,
@@ -35,30 +99,44 @@ function StrengthLogger({
     () => [...entries].reverse().find((e) => e.exercise === chosenName),
     [entries, chosenName],
   )
-  const [sets, setSets] = useState('3')
-  const [reps, setReps] = useState('10')
-  const [weight, setWeight] = useState('')
+  const [rows, setRows] = useState<SetRow[]>(() => rowsFromEntry(lastOfChosen))
 
-  // 種目を切り替えたら前回の記録をプリフィル
+  // 種目を切り替えたら前回の記録でセット行を作り直す
   useEffect(() => {
-    if (lastOfChosen) {
-      setSets(String(lastOfChosen.sets ?? 3))
-      setReps(String(lastOfChosen.reps ?? 10))
-      setWeight(lastOfChosen.weight != null ? String(lastOfChosen.weight) : '')
-    }
+    setRows(rowsFromEntry(lastOfChosen))
   }, [lastOfChosen])
 
+  const bodyweight = bodyweightExercises.has(chosenName)
+  const lastRows = lastOfChosen ? rowsFromEntry(lastOfChosen) : []
+
+  const setRow = (i: number, patch: Partial<SetRow>) =>
+    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)))
+
+  const step = (i: number, field: keyof SetRow, delta: number) =>
+    setRows((rs) =>
+      rs.map((r, j) => {
+        if (j !== i) return r
+        const cur = Number(r[field]) || 0
+        const next = Math.max(0, Math.round((cur + delta) * 10) / 10)
+        return { ...r, [field]: next === 0 && field === 'weight' ? '' : String(next) }
+      }),
+    )
+
   const save = () => {
-    if (!chosenName) return
-    const s = Math.max(1, Number(sets) || 1)
+    const setsDetail = rows
+      .map((r) => ({ weight: Number(r.weight) || undefined, reps: Number(r.reps) || 0 }))
+      .filter((s) => s.reps > 0)
+    if (!chosenName || setsDetail.length === 0) return
+    const weights = setsDetail.filter((s) => s.weight != null).map((s) => s.weight!)
     dispatch({
       type: 'addEntry',
       habitId: habit.id,
       exercise: chosenName,
-      sets: s,
-      reps: Number(reps) || undefined,
-      weight: Number(weight) || undefined,
-      value: s, // 週間ボリューム(総セット数)の集計用
+      setsDetail,
+      sets: setsDetail.length,
+      reps: Math.max(...setsDetail.map((s) => s.reps)),
+      weight: weights.length ? Math.max(...weights) : undefined,
+      value: setsDetail.length, // 週間ボリューム(総セット数)の集計用
     })
     onLogged()
   }
@@ -101,45 +179,73 @@ function StrengthLogger({
         />
       )}
       {chosenName && (
-        <>
-          <div className="strength-inputs">
-            <label>
-              重量(kg)
-              <input
-                type="number"
-                inputMode="decimal"
-                placeholder={bodyweightExercises.has(chosenName) ? '自重' : 'kg'}
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-              />
-            </label>
-            <label>
-              回数
-              <input
-                type="number"
-                inputMode="numeric"
-                value={reps}
-                onChange={(e) => setReps(e.target.value)}
-              />
-            </label>
-            <label>
-              セット
-              <input
-                type="number"
-                inputMode="numeric"
-                value={sets}
-                onChange={(e) => setSets(e.target.value)}
-              />
-            </label>
+        <div className="set-table">
+          <div className="set-row set-head">
+            <span>セット</span>
+            <span>重量(kg)</span>
+            <span>回数</span>
+            <span />
           </div>
-          {lastOfChosen && (
-            <p className="last-record">
-              前回: {lastOfChosen.weight != null ? `${lastOfChosen.weight}kg × ` : ''}
-              {lastOfChosen.reps ?? '-'}回 × {lastOfChosen.sets ?? '-'}セット({lastOfChosen.date.slice(5).replace('-', '/')})
-            </p>
-          )}
-        </>
+          {rows.map((r, i) => (
+            <div key={i} className="set-row">
+              <span className="set-no">
+                {i + 1}
+                {lastRows[i] && (
+                  <small>
+                    前回 {lastRows[i].weight ? `${lastRows[i].weight}kg×` : ''}
+                    {lastRows[i].reps}
+                  </small>
+                )}
+              </span>
+              <div className="stepper">
+                <button aria-label="重量を減らす" onClick={() => step(i, 'weight', -2.5)}>
+                  −
+                </button>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder={bodyweight ? '自重' : 'kg'}
+                  value={r.weight}
+                  onChange={(e) => setRow(i, { weight: e.target.value })}
+                />
+                <button aria-label="重量を増やす" onClick={() => step(i, 'weight', 2.5)}>
+                  +
+                </button>
+              </div>
+              <div className="stepper">
+                <button aria-label="回数を減らす" onClick={() => step(i, 'reps', -1)}>
+                  −
+                </button>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  value={r.reps}
+                  onChange={(e) => setRow(i, { reps: e.target.value })}
+                />
+                <button aria-label="回数を増やす" onClick={() => step(i, 'reps', 1)}>
+                  +
+                </button>
+              </div>
+              <button
+                className="set-remove"
+                aria-label={`${i + 1}セット目を削除`}
+                onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
+                disabled={rows.length <= 1}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+          <button
+            className="secondary-btn"
+            style={{ padding: 8 }}
+            onClick={() => setRows((rs) => [...rs, { ...rs[rs.length - 1] }])}
+          >
+            + セットを追加
+          </button>
+        </div>
       )}
+      {chosenName && <RestTimer />}
       <div style={{ display: 'flex', gap: 8 }}>
         <button className="secondary-btn" onClick={onClose}>
           閉じる

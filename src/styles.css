@@ -284,22 +284,96 @@ select {
   border-top: 1px solid var(--gridline);
 }
 
-.strength-inputs {
+/* セット表(1行 = 1セット: 番号+前回値 / 重量 / 回数 / 削除) */
+.set-table {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: 8px;
+  gap: 6px;
 }
 
-.strength-inputs label {
-  font-size: 12px;
-  color: var(--text-secondary);
+.set-row {
   display: grid;
-  gap: 4px;
+  grid-template-columns: 64px 1fr 1fr 28px;
+  gap: 6px;
+  align-items: center;
 }
 
-.last-record {
-  font-size: 12px;
+.set-row.set-head {
+  font-size: 11px;
   color: var(--text-muted);
+}
+
+.set-no {
+  font-size: 13px;
+  font-weight: 600;
+  display: grid;
+}
+
+.set-no small {
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.stepper {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--baseline);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--surface-1);
+}
+
+.stepper input {
+  border: none;
+  border-radius: 0;
+  text-align: center;
+  padding: 8px 2px;
+  min-width: 0;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.stepper input::-webkit-outer-spin-button,
+.stepper input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+.stepper button {
+  width: 32px;
+  flex-shrink: 0;
+  font-size: 18px;
+  color: var(--accent);
+  background: var(--accent-wash);
+}
+
+.set-remove {
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 6px 0;
+}
+
+.set-remove:disabled {
+  opacity: 0.3;
+}
+
+/* 休憩タイマー */
+.rest-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+}
+
+.rest-count {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+}
+
+.rest-count.done {
+  color: var(--good);
 }
 
 /* 今週の進捗ドット */

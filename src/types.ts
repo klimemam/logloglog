@@ -24,6 +24,12 @@ export interface Habit {
   archived?: boolean
 }
 
+/** 1セットの記録。自重種目では weight を省略 */
+export interface SetRecord {
+  weight?: number
+  reps: number
+}
+
 export interface Entry {
   id: string
   habitId: string
@@ -36,10 +42,14 @@ export interface Entry {
   note?: string
   /** 筋トレの種目記録(kind === 'strength' のエントリのみ) */
   exercise?: string
+  /** セット数(集計用サマリ)。setsDetail があればその件数と一致する */
   sets?: number
+  /** 代表値(最大回数)。セットごとの実値は setsDetail に入る */
   reps?: number
-  /** kg。自重種目では省略 */
+  /** 代表値(最大重量kg)。自重種目では省略 */
   weight?: number
+  /** セットごとの記録(Burnfit式: セットごとに重量×回数が異なってよい) */
+  setsDetail?: SetRecord[]
   createdAt: string
 }
 

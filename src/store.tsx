@@ -59,6 +59,7 @@ type Action =
       sets?: number
       reps?: number
       weight?: number
+      setsDetail?: import('./types').SetRecord[]
     }
   | { type: 'deleteEntry'; entryId: string }
   | { type: 'addHabit'; habit: Omit<Habit, 'id' | 'createdAt'> }
@@ -80,6 +81,7 @@ const reducer = (state: AppData, action: Action): AppData => {
         sets: action.sets,
         reps: action.reps,
         weight: action.weight,
+        setsDetail: action.setsDetail,
         createdAt: new Date().toISOString(),
       }
       return { ...state, entries: [...state.entries, entry] }

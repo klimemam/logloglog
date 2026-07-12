@@ -98,8 +98,27 @@ export const weeklyBestSeries = (entries: Entry[], n: number): WeekPoint[] => {
   return weeks.map((w) => ({ weekStart: w, value: best.get(w) ?? null }))
 }
 
+/** Epley式の推定1RM(その重量・回数から換算した1回挙上できる最大重量) */
+export const epley1RM = (weight: number, reps: number): number =>
+  Math.round(weight * (1 + reps / 30) * 10) / 10
+
+/** エントリ1件のベスト値: 重量ありは推定1RM、自重は最大回数 */
+const entryBest = (e: Entry, byWeight: boolean): number | null => {
+  if (e.setsDetail?.length) {
+    if (byWeight) {
+      const vals = e.setsDetail
+        .filter((s) => s.weight != null && s.reps > 0)
+        .map((s) => epley1RM(s.weight!, s.reps))
+      return vals.length ? Math.max(...vals) : null
+    }
+    return Math.max(...e.setsDetail.map((s) => s.reps))
+  }
+  if (byWeight) return e.weight != null ? epley1RM(e.weight, e.reps ?? 1) : null
+  return e.reps ?? null
+}
+
 /**
- * 筋トレ種目ごとの週別ベスト。重量の記録がある種目は最大重量(kg)、
+ * 筋トレ種目ごとの週別ベスト。重量の記録がある種目は推定1RM(kg)、
  * 自重種目(重量未記録)は最大回数で成長を追う。
  */
 export const exerciseWeeklyBest = (
@@ -108,11 +127,13 @@ export const exerciseWeeklyBest = (
   n: number,
 ): { points: WeekPoint[]; byWeight: boolean } => {
   const targeted = entries.filter((e) => e.exercise === exercise)
-  const byWeight = targeted.some((e) => e.weight != null)
+  const byWeight = targeted.some(
+    (e) => e.weight != null || e.setsDetail?.some((s) => s.weight != null),
+  )
   const weeks = recentWeekStarts(n)
   const best = new Map<string, number>()
   for (const e of targeted) {
-    const v = byWeight ? e.weight : e.reps
+    const v = entryBest(e, byWeight)
     if (v == null) continue
     const w = weekStartKey(e.date)
     const cur = best.get(w)

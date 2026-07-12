@@ -54,7 +54,8 @@ function ExerciseProgress({ entries, color }: { entries: Entry[]; color: string 
         ))}
       </div>
       <p className="subtitle">
-        {exercise} の週間ベスト{byWeight ? '重量' : '回数(自重)'}(直近12週)
+        {exercise} の週間ベスト
+        {byWeight ? '推定1RM(重量×回数から換算した最大挙上重量)' : '回数(自重)'}(直近12週)
       </p>
       <TrendLineChart points={points} unit={byWeight ? 'kg' : '回'} color={color} />
     </>
