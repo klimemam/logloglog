@@ -1,12 +1,16 @@
 import { useMemo, useState } from 'react'
 import { useStore } from '../store'
+import type { Entry } from '../types'
 import {
   aggregateByDay,
   currentStreak,
   dailySeries,
+  exerciseWeeklyBest,
   levelFromXp,
   loadTrend,
+  recentExercises,
   thisWeekProgress,
+  weeklyBestSeries,
   weeklySeries,
   xpForEntries,
 } from '../lib/stats'
@@ -19,6 +23,43 @@ const trendText = {
   down: { label: '↓ ペースダウン', cls: 'down', desc: '直近4週の負荷が前の4週より減っています' },
   none: { label: 'まだデータ不足', cls: '', desc: '記録を続けると傾向が表示されます' },
 } as const
+
+const trendTextTime = {
+  up: { label: '↑ レベルアップ中', cls: 'up', desc: '直近4週のベストタイムが縮んでいます' },
+  flat: { label: '→ 維持', cls: '', desc: '直近4週のタイムは前の4週とほぼ同じです' },
+  down: { label: '↓ ペースダウン', cls: 'down', desc: '直近4週のタイムが前の4週より伸びています' },
+  none: { label: 'まだデータ不足', cls: '', desc: '記録を続けると傾向が表示されます' },
+} as const
+
+/** 筋トレ習慣の種目別ベスト(最大重量 / 自重種目は最大回数)チャート */
+function ExerciseProgress({ entries, color }: { entries: Entry[]; color: string }) {
+  const exercises = useMemo(() => recentExercises(entries), [entries])
+  const [selected, setSelected] = useState<string | null>(null)
+  const exercise = selected && exercises.includes(selected) ? selected : exercises[0]
+  if (!exercise) {
+    return <p className="empty-note">種目を記録すると成長グラフが表示されます</p>
+  }
+  const { points, byWeight } = exerciseWeeklyBest(entries, exercise, 12)
+  return (
+    <>
+      <div className="chip-row">
+        {exercises.map((ex) => (
+          <button
+            key={ex}
+            className={`chip${ex === exercise ? ' active' : ''}`}
+            onClick={() => setSelected(ex)}
+          >
+            {ex}
+          </button>
+        ))}
+      </div>
+      <p className="subtitle">
+        {exercise} の週間ベスト{byWeight ? '重量' : '回数(自重)'}(直近12週)
+      </p>
+      <TrendLineChart points={points} unit={byWeight ? 'kg' : '回'} color={color} />
+    </>
+  )
+}
 
 export function StatsView() {
   const { data } = useStore()
@@ -42,10 +83,11 @@ export function StatsView() {
   const week = thisWeekProgress(data.entries, habit)
   const streak = currentStreak(aggregateByDay(habitEntries))
   const { level, intoLevel, needed } = levelFromXp(xpForEntries(habitEntries.length))
-  const trend = trendText[loadTrend(habitEntries, habit)]
+  const trend = (habit.lowerIsBetter ? trendTextTime : trendText)[loadTrend(data.entries, habit)]
   const weeks12 = weeklySeries(habitEntries, 12)
   const allDays = dailySeries(data.entries, 15 * 7)
   const color = seriesVar(habit.colorSlot)
+  const isStrength = habit.kind === 'strength'
 
   return (
     <>
@@ -113,11 +155,38 @@ export function StatsView() {
           <WeeklyBarChart weeks={weeks12} target={habit.weeklyTarget} color={color} />
         </div>
 
-        {habit.metric !== 'none' && (
+        {isStrength && (
+          <div className="card chart-card">
+            <h3>種目別の成長</h3>
+            <ExerciseProgress entries={habitEntries} color={color} />
+          </div>
+        )}
+
+        {habit.metric !== 'none' && habit.lowerIsBetter && (
+          <div className="card chart-card">
+            <h3>週のベストタイム({habit.unit})</h3>
+            <p className="subtitle">レベルが上がっているかは、この線が下がっているかで確認</p>
+            <TrendLineChart
+              points={weeklyBestSeries(habitEntries, 12)}
+              unit={habit.unit}
+              color={color}
+            />
+          </div>
+        )}
+
+        {habit.metric !== 'none' && !habit.lowerIsBetter && (
           <div className="card chart-card">
             <h3>週別ボリューム({habit.unit})</h3>
-            <p className="subtitle">レベルが上がっているかは、この線の傾きで確認</p>
-            <TrendLineChart weeks={weeks12} unit={habit.unit} color={color} />
+            <p className="subtitle">
+              {isStrength
+                ? '週の総セット数。レベルが上がっているかは種目別の成長も確認'
+                : 'レベルが上がっているかは、この線の傾きで確認'}
+            </p>
+            <TrendLineChart
+              points={weeks12.map((w) => ({ weekStart: w.weekStart, value: w.value }))}
+              unit={habit.unit}
+              color={color}
+            />
           </div>
         )}
 

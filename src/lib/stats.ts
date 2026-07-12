@@ -79,17 +79,88 @@ export const levelFromXp = (xp: number): { level: number; intoLevel: number; nee
   return { level, intoLevel: xp - base, needed: next - base }
 }
 
+/** 週ごとの値の点列(記録がない週は null)。折れ線チャート用 */
+export interface WeekPoint {
+  weekStart: string
+  value: number | null
+}
+
+/** タイム系(値が小さいほど良い)習慣の週別ベスト(最小値) */
+export const weeklyBestSeries = (entries: Entry[], n: number): WeekPoint[] => {
+  const weeks = recentWeekStarts(n)
+  const best = new Map<string, number>()
+  for (const e of entries) {
+    if (e.value == null) continue
+    const w = weekStartKey(e.date)
+    const cur = best.get(w)
+    if (cur == null || e.value < cur) best.set(w, e.value)
+  }
+  return weeks.map((w) => ({ weekStart: w, value: best.get(w) ?? null }))
+}
+
+/**
+ * 筋トレ種目ごとの週別ベスト。重量の記録がある種目は最大重量(kg)、
+ * 自重種目(重量未記録)は最大回数で成長を追う。
+ */
+export const exerciseWeeklyBest = (
+  entries: Entry[],
+  exercise: string,
+  n: number,
+): { points: WeekPoint[]; byWeight: boolean } => {
+  const targeted = entries.filter((e) => e.exercise === exercise)
+  const byWeight = targeted.some((e) => e.weight != null)
+  const weeks = recentWeekStarts(n)
+  const best = new Map<string, number>()
+  for (const e of targeted) {
+    const v = byWeight ? e.weight : e.reps
+    if (v == null) continue
+    const w = weekStartKey(e.date)
+    const cur = best.get(w)
+    if (cur == null || v > cur) best.set(w, v)
+  }
+  return { points: weeks.map((w) => ({ weekStart: w, value: best.get(w) ?? null })), byWeight }
+}
+
+/** 記録された種目を新しい順・重複なしで返す */
+export const recentExercises = (entries: Entry[]): string[] => {
+  const seen = new Set<string>()
+  const out: string[] = []
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const ex = entries[i].exercise
+    if (ex && !seen.has(ex)) {
+      seen.add(ex)
+      out.push(ex)
+    }
+  }
+  return out
+}
+
 export type Trend = 'up' | 'flat' | 'down' | 'none'
 
 /**
  * レベルアップ傾向: 今週(進行中)を除いた直近4週の負荷を、その前の4週と比べる。
- * 記録値のある習慣は合計値で、ない習慣は回数で比較する。
+ * 記録値のある習慣は合計値(筋トレは総セット数)、ない習慣は回数で比較する。
+ * タイム系(lowerIsBetter)は週別ベストの平均で比較し、縮んでいれば「上昇」。
  */
 export const loadTrend = (entries: Entry[], habit: Habit): Trend => {
-  const weeks = weeklySeries(
-    entries.filter((e) => e.habitId === habit.id),
-    9,
-  )
+  const own = entries.filter((e) => e.habitId === habit.id)
+
+  if (habit.lowerIsBetter) {
+    const points = weeklyBestSeries(own, 9).slice(0, 8)
+    const avg = (ps: WeekPoint[]) => {
+      const vs = ps.map((p) => p.value).filter((v): v is number => v != null)
+      return vs.length ? vs.reduce((s, v) => s + v, 0) / vs.length : null
+    }
+    const prior = avg(points.slice(0, 4))
+    const recent = avg(points.slice(4, 8))
+    if (prior == null || recent == null) return 'none'
+    const ratio = recent / prior
+    if (ratio <= 0.95) return 'up' // タイム短縮 = レベルアップ
+    if (ratio >= 1.05) return 'down'
+    return 'flat'
+  }
+
+  const weeks = weeklySeries(own, 9)
   const pick = (w: WeekAgg) => (habit.metric === 'none' ? w.count : w.value)
   const recent = weeks.slice(4, 8).reduce((s, w) => s + pick(w), 0)
   const prior = weeks.slice(0, 4).reduce((s, w) => s + pick(w), 0)

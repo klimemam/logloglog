@@ -154,33 +154,46 @@ export function WeeklyBarChart({
 }
 
 /**
- * 週別ボリュームのラインチャート(2pxライン、~10%のエリアウォッシュ、終端ドット+直接ラベル)。
+ * 週別値のラインチャート(2pxライン、~10%のエリアウォッシュ、終端ドット+直接ラベル)。
+ * value が null の週は「記録なし」として線を切る(0として描かない)。
  */
 export function TrendLineChart({
-  weeks,
+  points: data,
   unit,
   color,
 }: {
-  weeks: WeekAgg[]
+  points: { weekStart: string; value: number | null }[]
   unit: string
   color: string
 }) {
   const { tip, wrapRef, show, hide } = useTooltip()
   const plotW = W - PAD.left - PAD.right
   const plotH = H - PAD.top - PAD.bottom
-  const maxV = niceMax(Math.max(1, ...weeks.map((w) => w.value)))
-  const band = plotW / weeks.length
+  const values = data.map((p) => p.value).filter((v): v is number => v != null)
+  const maxV = niceMax(Math.max(1, ...values))
+  const band = plotW / data.length
   const px = (i: number) => PAD.left + band * (i + 0.5)
   const py = (v: number) => PAD.top + plotH - (v / maxV) * plotH
   const ticks = [0, maxV / 2, maxV].map((t) => Math.round(t * 10) / 10)
-  const points = weeks.map((w, i) => `${px(i)},${py(w.value)}`).join(' ')
-  const area = `${PAD.left + band * 0.5},${PAD.top + plotH} ${points} ${px(weeks.length - 1)},${PAD.top + plotH}`
-  const last = weeks[weeks.length - 1]
   const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
+
+  // null で分断された連続区間ごとにセグメントを作る
+  const segments: { i: number; v: number }[][] = []
+  let cur: { i: number; v: number }[] = []
+  data.forEach((p, i) => {
+    if (p.value == null) {
+      if (cur.length) segments.push(cur)
+      cur = []
+    } else {
+      cur.push({ i, v: p.value })
+    }
+  })
+  if (cur.length) segments.push(cur)
+  const lastIdx = data.reduce((acc, p, i) => (p.value != null ? i : acc), -1)
 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      <svg className="chart-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="週別のボリューム推移">
+      <svg className="chart-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="週別の推移">
         {ticks.map((t) => (
           <g key={t}>
             <line
@@ -202,19 +215,32 @@ export function TrendLineChart({
             </text>
           </g>
         ))}
-        <polygon points={area} fill={color} opacity={0.1} />
-        <polyline
-          points={points}
-          fill="none"
-          stroke={color}
-          strokeWidth={2}
-          strokeLinejoin="round"
-          strokeLinecap="round"
-        />
-        {weeks.map((w, i) => {
-          const label = `${formatDateShort(w.weekStart)}週: ${fmt(w.value)}${unit}`
+        {segments.map((seg) => {
+          const pts = seg.map((p) => `${px(p.i)},${py(p.v)}`).join(' ')
+          const area = `${px(seg[0].i)},${PAD.top + plotH} ${pts} ${px(seg[seg.length - 1].i)},${PAD.top + plotH}`
           return (
-            <g key={w.weekStart}>
+            <g key={seg[0].i}>
+              {seg.length > 1 && <polygon points={area} fill={color} opacity={0.1} />}
+              <polyline
+                points={pts}
+                fill="none"
+                stroke={color}
+                strokeWidth={2}
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+              {/* 孤立点はドットで示す(線が引けないため) */}
+              {seg.length === 1 && <circle cx={px(seg[0].i)} cy={py(seg[0].v)} r={4} fill={color} />}
+            </g>
+          )
+        })}
+        {data.map((p, i) => {
+          const label =
+            p.value == null
+              ? `${formatDateShort(p.weekStart)}週: 記録なし`
+              : `${formatDateShort(p.weekStart)}週: ${fmt(p.value)}${unit}`
+          return (
+            <g key={p.weekStart}>
               <rect
                 x={PAD.left + band * i}
                 y={PAD.top}
@@ -225,7 +251,7 @@ export function TrendLineChart({
                 onPointerDown={(e) => show(e, label)}
                 onPointerLeave={hide}
               />
-              {(i === weeks.length - 1 || i % 4 === 0) && (
+              {(i === data.length - 1 || i % 4 === 0) && (
                 <text
                   x={px(i)}
                   y={H - 8}
@@ -233,38 +259,30 @@ export function TrendLineChart({
                   fontSize={10}
                   fill="var(--text-muted)"
                 >
-                  {formatDateShort(w.weekStart)}
+                  {formatDateShort(p.weekStart)}
                 </text>
               )}
             </g>
           )
         })}
-        {/* 終端ドット: サーフェスリング付き + 直接ラベル */}
-        <circle
-          cx={px(weeks.length - 1)}
-          cy={py(last.value)}
-          r={6}
-          fill="var(--surface-1)"
-          pointerEvents="none"
-        />
-        <circle
-          cx={px(weeks.length - 1)}
-          cy={py(last.value)}
-          r={4}
-          fill={color}
-          pointerEvents="none"
-        />
-        <text
-          x={px(weeks.length - 1) - 8}
-          y={py(last.value) - 10}
-          textAnchor="end"
-          fontSize={11}
-          fontWeight={600}
-          fill="var(--text-primary)"
-        >
-          {fmt(last.value)}
-          {unit}
-        </text>
+        {/* 終端(最後に記録がある週)のドット: サーフェスリング付き + 直接ラベル */}
+        {lastIdx >= 0 && (
+          <g pointerEvents="none">
+            <circle cx={px(lastIdx)} cy={py(data[lastIdx].value!)} r={6} fill="var(--surface-1)" />
+            <circle cx={px(lastIdx)} cy={py(data[lastIdx].value!)} r={4} fill={color} />
+            <text
+              x={px(lastIdx) - 8}
+              y={py(data[lastIdx].value!) - 10}
+              textAnchor="end"
+              fontSize={11}
+              fontWeight={600}
+              fill="var(--text-primary)"
+            >
+              {fmt(data[lastIdx].value!)}
+              {unit}
+            </text>
+          </g>
+        )}
         <line
           x1={PAD.left}
           x2={W - PAD.right}

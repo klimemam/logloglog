@@ -11,13 +11,13 @@ const uid = (): string =>
 const defaultHabits = (): Habit[] => [
   {
     id: uid(),
-    name: 'ワークアウト',
+    name: '筋トレ',
     emoji: '💪',
     colorSlot: 0,
-    metric: 'duration',
-    unit: '分',
+    kind: 'strength',
+    metric: 'reps',
+    unit: 'セット',
     weeklyTarget: 3,
-    defaultValue: 30,
     createdAt: new Date().toISOString(),
   },
   {
@@ -49,7 +49,17 @@ const load = (): AppData => {
 }
 
 type Action =
-  | { type: 'addEntry'; habitId: string; value?: number; note?: string; date?: string }
+  | {
+      type: 'addEntry'
+      habitId: string
+      value?: number
+      note?: string
+      date?: string
+      exercise?: string
+      sets?: number
+      reps?: number
+      weight?: number
+    }
   | { type: 'deleteEntry'; entryId: string }
   | { type: 'addHabit'; habit: Omit<Habit, 'id' | 'createdAt'> }
   | { type: 'updateHabit'; habit: Habit }
@@ -66,6 +76,10 @@ const reducer = (state: AppData, action: Action): AppData => {
         time: nowTime(),
         value: action.value,
         note: action.note,
+        exercise: action.exercise,
+        sets: action.sets,
+        reps: action.reps,
+        weight: action.weight,
         createdAt: new Date().toISOString(),
       }
       return { ...state, entries: [...state.entries, entry] }

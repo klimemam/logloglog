@@ -275,6 +275,33 @@ select {
   flex-shrink: 0;
 }
 
+/* 筋トレ記録フォーム */
+.strength-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--gridline);
+}
+
+.strength-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.strength-inputs label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  display: grid;
+  gap: 4px;
+}
+
+.last-record {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 /* 今週の進捗ドット */
 .week-dots {
   display: flex;
