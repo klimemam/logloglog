@@ -3,6 +3,7 @@ import { StoreProvider, useStore } from './store'
 import { HomeView } from './components/HomeView'
 import { StatsView } from './components/StatsView'
 import { HabitsView } from './components/HabitsView'
+import { SettingsView } from './components/SettingsView'
 import { Sheet } from './components/Sheet'
 import { getSyncConfig, handleAuthRedirect, syncNow } from './lib/sync'
 
@@ -70,7 +71,7 @@ function SyncManager() {
   return null
 }
 
-type Tab = 'home' | 'stats' | 'habits'
+type Tab = 'home' | 'stats' | 'habits' | 'settings'
 
 const icons: Record<Tab, (active: boolean) => JSX.Element> = {
   home: (active) => (
@@ -94,12 +95,19 @@ const icons: Record<Tab, (active: boolean) => JSX.Element> = {
       <circle cx="15" cy="17" r="2.6" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.15 : 0} />
     </svg>
   ),
+  settings: (active) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="3.2" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.15 : 0} />
+      <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1.03 1.56V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.7 1.7 0 0 0 4.6 15a1.7 1.7 0 0 0-1.56-1.03H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.7 1.7 0 0 0 9 4.6a1.7 1.7 0 0 0 1.03-1.56V3a2 2 0 1 1 4 0v.09c0 .68.4 1.3 1.03 1.56a1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.7 1.7 0 0 0 19.4 9c.26.63.88 1.03 1.56 1.03H21a2 2 0 1 1 0 4h-.09c-.68 0-1.3.4-1.51.97z" />
+    </svg>
+  ),
 }
 
 const tabs: { id: Tab; label: string }[] = [
   { id: 'home', label: '記録' },
   { id: 'stats', label: '統計' },
   { id: 'habits', label: '習慣' },
+  { id: 'settings', label: '設定' },
 ]
 
 export default function App() {
@@ -112,6 +120,7 @@ export default function App() {
       {tab === 'home' && <HomeView />}
       {tab === 'stats' && <StatsView />}
       {tab === 'habits' && <HabitsView />}
+      {tab === 'settings' && <SettingsView />}
       <nav className="tabbar" aria-label="メインナビゲーション">
         {tabs.map((t) => (
           <button
