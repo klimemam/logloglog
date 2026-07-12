@@ -6,10 +6,34 @@ import { HabitsView } from './components/HabitsView'
 
 type Tab = 'home' | 'stats' | 'habits'
 
-const tabs: { id: Tab; icon: string; label: string }[] = [
-  { id: 'home', icon: '✏️', label: '記録' },
-  { id: 'stats', icon: '📈', label: '統計' },
-  { id: 'habits', icon: '⚙️', label: '習慣' },
+const icons: Record<Tab, (active: boolean) => JSX.Element> = {
+  home: (active) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.15 : 0} />
+    </svg>
+  ),
+  stats: (active) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 2} strokeLinecap="round" aria-hidden>
+      <path d="M4 20V10" />
+      <path d="M12 20V4" />
+      <path d="M20 20v-7" />
+    </svg>
+  ),
+  habits: (active) => (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.4 : 2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <line x1="4" y1="7" x2="20" y2="7" />
+      <line x1="4" y1="17" x2="20" y2="17" />
+      <circle cx="9" cy="7" r="2.6" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.15 : 0} />
+      <circle cx="15" cy="17" r="2.6" fill={active ? 'currentColor' : 'none'} fillOpacity={active ? 0.15 : 0} />
+    </svg>
+  ),
+}
+
+const tabs: { id: Tab; label: string }[] = [
+  { id: 'home', label: '記録' },
+  { id: 'stats', label: '統計' },
+  { id: 'habits', label: '習慣' },
 ]
 
 export default function App() {
@@ -28,9 +52,7 @@ export default function App() {
             aria-current={tab === t.id ? 'page' : undefined}
             onClick={() => setTab(t.id)}
           >
-            <span className="tab-icon" aria-hidden>
-              {t.icon}
-            </span>
+            {icons[t.id](tab === t.id)}
             {t.label}
           </button>
         ))}

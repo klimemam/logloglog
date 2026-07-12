@@ -12,6 +12,53 @@ const metricLabel = (h: Habit, value: number) =>
 
 const FREE_INPUT = '__free__'
 
+/** 下からスライドして出るボトムシート。open の切り替えで開閉アニメーションする */
+function Sheet({
+  open,
+  title,
+  onClose,
+  children,
+}: {
+  open: boolean
+  title: React.ReactNode
+  onClose: () => void
+  children: React.ReactNode
+}) {
+  const [render, setRender] = useState(open)
+  const [shown, setShown] = useState(false)
+
+  useEffect(() => {
+    if (open) {
+      setRender(true)
+      // マウント直後にクラスを付けるとtransitionが走らないため2フレーム待つ
+      const raf = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)))
+      return () => cancelAnimationFrame(raf)
+    }
+    setShown(false)
+    const t = setTimeout(() => setRender(false), 300)
+    return () => clearTimeout(t)
+  }, [open])
+
+  useEffect(() => {
+    if (!render) return
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [render])
+
+  if (!render) return null
+  return (
+    <div className={`sheet-overlay${shown ? ' open' : ''}`} onClick={onClose}>
+      <div className="sheet" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
+        <div className="sheet-handle" />
+        <div className="sheet-title">{title}</div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 interface SetRow {
   weight: string
   reps: string
@@ -286,10 +333,14 @@ function HabitCard({
     onLogged(habit.id, habit.name)
   }
 
+  const wash = `color-mix(in srgb, ${seriesVar(habit.colorSlot)} 13%, transparent)`
+
   return (
     <div className="card">
       <div className="habit-card">
-        <div className="habit-emoji">{habit.emoji}</div>
+        <div className="habit-emoji" style={{ background: wash }}>
+          {habit.emoji}
+        </div>
         <div className="habit-info">
           <div className="habit-name">
             <span className="color-dot" style={{ background: seriesVar(habit.colorSlot) }} />
@@ -320,57 +371,79 @@ function HabitCard({
           className={`log-btn${todayEntries.length > 0 ? ' done' : ''}`}
           aria-label={`${habit.name}を記録する`}
           onClick={() =>
-            isStrength
-              ? setOpen(!open)
-              : log(habit.metric === 'none' ? undefined : habit.defaultValue)
+            isStrength ? setOpen(true) : log(habit.metric === 'none' ? undefined : habit.defaultValue)
           }
         >
           {!isStrength && todayEntries.length > 0 ? '✓' : '+'}
         </button>
       </div>
       {!isStrength && (
-        <button className="detail-toggle" onClick={() => setOpen(!open)}>
-          {open ? '閉じる' : '詳しく記録する ▸'}
+        <button className="detail-toggle" onClick={() => setOpen(true)}>
+          詳しく記録する ▸
         </button>
       )}
-      {open && isStrength && (
-        <StrengthLogger
-          habit={habit}
-          entries={entries}
-          onLogged={() => onLogged(habit.id, habit.name)}
+      {isStrength ? (
+        <Sheet
+          open={open}
+          title={
+            <>
+              {habit.emoji} {habit.name}を記録
+            </>
+          }
           onClose={() => setOpen(false)}
-        />
-      )}
-      {open && !isStrength && (
-        <div className="detail-form">
-          {habit.metric !== 'none' && (
-            <input
-              type="number"
-              inputMode="decimal"
-              placeholder={habit.unit}
-              value={value}
-              onChange={(e) => setValue(e.target.value)}
-              aria-label={`記録値(${habit.unit})`}
-            />
-          )}
-          <input
-            type="text"
-            placeholder="メモ(任意)"
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
+        >
+          <StrengthLogger
+            habit={habit}
+            entries={entries}
+            onLogged={() => onLogged(habit.id, habit.name)}
+            onClose={() => setOpen(false)}
           />
-          <button
-            className="save"
-            onClick={() => {
-              const v = habit.metric === 'none' ? undefined : Number(value) || undefined
-              log(v, note)
-              setNote('')
-              setOpen(false)
-            }}
-          >
-            記録
-          </button>
-        </div>
+        </Sheet>
+      ) : (
+        <Sheet
+          open={open}
+          title={
+            <>
+              {habit.emoji} {habit.name}を記録
+            </>
+          }
+          onClose={() => setOpen(false)}
+        >
+          <div className="form-grid">
+            {habit.metric !== 'none' && (
+              <label>
+                記録値({habit.unit})
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  placeholder={habit.unit}
+                  value={value}
+                  onChange={(e) => setValue(e.target.value)}
+                />
+              </label>
+            )}
+            <label>
+              メモ(任意)
+              <input
+                type="text"
+                placeholder="例: 調子よかった"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </label>
+            <button
+              className="primary-btn"
+              onClick={() => {
+                const v = habit.metric === 'none' ? undefined : Number(value) || undefined
+                log(v, note)
+                setNote('')
+                setOpen(false)
+              }}
+            >
+              記録する
+            </button>
+          </div>
+        </Sheet>
       )}
     </div>
   )
