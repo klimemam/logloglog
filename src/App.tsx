@@ -4,7 +4,11 @@ import { HomeView } from './components/HomeView'
 import { StatsView } from './components/StatsView'
 import { HabitsView } from './components/HabitsView'
 import { Sheet } from './components/Sheet'
-import { getSyncConfig, syncNow } from './lib/sync'
+import { getSyncConfig, handleAuthRedirect, syncNow } from './lib/sync'
+
+// Googleログインから戻ってきた場合、URLのトークンをセッションとして保存する
+// (レンダリング前に一度だけ処理する)
+handleAuthRedirect()
 
 const ONBOARD_KEY = 'logloglog:onboarded'
 

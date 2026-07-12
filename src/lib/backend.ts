@@ -11,3 +11,6 @@ export const SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJoa2poaGJjZ3V4dmxyc3B1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTgxMzgsImV4cCI6MjA5OTQzNDEzOH0.y8nigscs12zSiaXXmPl8zzzhk2RfuswXVR-i8aW1u-8'
 
 export const emailSyncAvailable = (): boolean => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
+
+/** SupabaseのGoogleプロバイダを有効化済みならtrue(ログインボタンが出る) */
+export const GOOGLE_LOGIN_ENABLED = true

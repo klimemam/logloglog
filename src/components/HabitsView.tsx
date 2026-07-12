@@ -7,11 +7,12 @@ import {
   getSyncStatus,
   mergeData,
   setSyncConfig,
+  startGoogleLogin,
   subscribeSync,
   supabaseSignIn,
   syncNow,
 } from '../lib/sync'
-import { emailSyncAvailable } from '../lib/backend'
+import { emailSyncAvailable, GOOGLE_LOGIN_ENABLED } from '../lib/backend'
 
 /** マルチデバイス同期の設定(メール / GitHub Gist) */
 function SyncSection() {
@@ -113,6 +114,32 @@ function SyncSection() {
             {method === 'email' &&
               (emailSyncAvailable() ? (
                 <>
+                  {GOOGLE_LOGIN_ENABLED && (
+                    <>
+                      <button className="secondary-btn google-btn" onClick={startGoogleLogin}>
+                        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
+                          <path
+                            fill="#4285F4"
+                            d="M23.5 12.27c0-.85-.08-1.66-.22-2.45H12v4.64h6.45a5.52 5.52 0 0 1-2.39 3.62v3h3.86c2.26-2.09 3.58-5.16 3.58-8.81z"
+                          />
+                          <path
+                            fill="#34A853"
+                            d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.86-3c-1.07.72-2.44 1.14-4.08 1.14-3.13 0-5.78-2.11-6.73-4.96H1.29v3.1A12 12 0 0 0 12 24z"
+                          />
+                          <path
+                            fill="#FBBC05"
+                            d="M5.27 14.27a7.2 7.2 0 0 1 0-4.54v-3.1H1.29a12 12 0 0 0 0 10.74l3.98-3.1z"
+                          />
+                          <path
+                            fill="#EA4335"
+                            d="M12 4.77c1.77 0 3.35.61 4.6 1.8l3.43-3.42A11.98 11.98 0 0 0 1.29 6.63l3.98 3.1C6.22 6.88 8.87 4.77 12 4.77z"
+                          />
+                        </svg>
+                        Googleでログイン
+                      </button>
+                      <div className="or-divider">または メールアドレスで</div>
+                    </>
+                  )}
                   <input
                     type="email"
                     placeholder="メールアドレス"

@@ -211,6 +211,57 @@ export const supabaseSignIn = async (
   return toSession(j)
 }
 
+/** Googleログインへ遷移する(Supabase OAuth経由。戻り先はこのアプリ) */
+export const startGoogleLogin = () => {
+  const redirect = encodeURIComponent(location.origin + location.pathname)
+  location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirect}`
+}
+
+const decodeJwtPayload = (jwt: string): { sub?: string; email?: string } => {
+  const b64 = jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')
+  return JSON.parse(atob(b64)) as { sub?: string; email?: string }
+}
+
+/**
+ * OAuthリダイレクトで戻ってきたときのURLハッシュ(#access_token=…)を処理する。
+ * セッションを保存できたらtrue。エラーで戻ってきた場合はメッセージをstatusに出す。
+ */
+export const handleAuthRedirect = (): boolean => {
+  const hash = location.hash
+  if (!hash || hash.length < 2) return false
+  const params = new URLSearchParams(hash.slice(1))
+  const clearHash = () => history.replaceState(null, '', location.pathname + location.search)
+
+  const errDesc = params.get('error_description')
+  if (errDesc) {
+    clearHash()
+    setStatus({ state: 'error', message: `Googleログインに失敗しました: ${errDesc}` })
+    return false
+  }
+
+  const access_token = params.get('access_token')
+  const refresh_token = params.get('refresh_token')
+  if (!access_token || !refresh_token) return false
+  try {
+    const payload = decodeJwtPayload(access_token)
+    if (!payload.sub) return false
+    setSyncConfig({
+      provider: 'supabase',
+      email: payload.email ?? 'Googleアカウント',
+      session: {
+        access_token,
+        refresh_token,
+        expires_at: Date.now() + Number(params.get('expires_in') ?? 3600) * 1000,
+        user_id: payload.sub,
+      },
+    })
+    clearHash()
+    return true
+  } catch {
+    return false
+  }
+}
+
 /** 期限が近ければリフレッシュし、有効なセッションを返す(設定にも保存) */
 const ensureSession = async (cfg: Extract<SyncConfig, { provider: 'supabase' }>): Promise<SupabaseSession> => {
   if (cfg.session.expires_at - Date.now() > 60_000) return cfg.session

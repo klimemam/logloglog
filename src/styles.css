@@ -1226,6 +1226,29 @@ select:focus {
   font-weight: 600;
 }
 
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.or-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.or-divider::before,
+.or-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--gridline);
+}
+
 textarea.transfer-code {
   font: 11px/1.4 ui-monospace, monospace;
   color: var(--text-secondary);
