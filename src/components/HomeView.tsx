@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useStore } from '../store'
 import type { Habit } from '../types'
 import { formatDateLong, todayKey } from '../lib/dates'
-import { aggregateByDay, currentStreak, thisWeekProgress } from '../lib/stats'
+import { aggregateByDay, currentStreak, dailyHabitMatrix, thisWeekProgress } from '../lib/stats'
 import { Sheet } from './Sheet'
+import { DailyMatrix } from './charts'
 import { t, tName } from '../lib/i18n'
 import {
   ExercisePicker,
@@ -169,7 +170,7 @@ function HabitCard({
   )
 }
 
-export function HomeView() {
+export function HomeView({ onOpenStats }: { onOpenStats?: () => void }) {
   const { data, dispatch } = useStore()
   const [toast, setToast] = useState<ToastState | null>(null)
   const [session, setSession] = useState<WorkoutSession | null>(loadSession)
@@ -196,6 +197,7 @@ export function HomeView() {
   }
 
   const habits = data.habits.filter((h) => !h.archived)
+  const matrix = dailyHabitMatrix(habits, data.entries, 28)
   const sessionHabit = session ? habits.find((h) => h.id === session.habitId) : undefined
   const sessionEntries = session
     ? data.entries.filter((e) => e.habitId === session.habitId)
@@ -263,6 +265,24 @@ export function HomeView() {
         <div className="date">{formatDateLong(todayKey())}</div>
       </header>
       <main className="app-main">
+        {/* 動線の始点: まず全習慣の状況を俯瞰してから、下で記録する */}
+        {habits.length > 0 && (
+          <div className="card chart-card home-summary">
+            <div className="home-summary-head">
+              <h3>{t('デイリーサマリー')}</h3>
+              {onOpenStats && (
+                <button className="text-btn" onClick={onOpenStats}>
+                  {t('詳しく ▸')}
+                </button>
+              )}
+            </div>
+            <DailyMatrix
+              rows={matrix.rows}
+              days={matrix.days}
+              unitOf={(row) => (row.habit.metric === 'none' ? t('回') : row.habit.unit || '')}
+            />
+          </div>
+        )}
         {habits.map((h) => (
           <HabitCard
             key={h.id}

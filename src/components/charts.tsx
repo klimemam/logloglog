@@ -325,8 +325,7 @@ export function DailyMatrix({
   }, [])
   const cell = 15
   const gap = 3
-  const labelW = 92
-  const width = labelW + days.length * (cell + gap)
+  const width = days.length * (cell + gap)
   const height = rows.length * (cell + gap) + 16
   const seq = ['var(--seq-0)', 'var(--seq-1)', 'var(--seq-2)', 'var(--seq-3)', 'var(--seq-4)']
   const colorFor = (v: number, max: number) =>
@@ -334,64 +333,64 @@ export function DailyMatrix({
   const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
 
   return (
-    <div ref={wrapRef} style={{ position: 'relative', overflowX: 'auto' }}>
-      <svg
-        width={width}
-        height={height}
-        style={{ display: 'block' }}
-        role="img"
-        aria-label="習慣ごとの日別サマリー"
-      >
-        {rows.map((row, r) => (
-          <g key={row.habit.id}>
-            <text
-              x={labelW - 8}
-              y={r * (cell + gap) + cell - 3}
-              textAnchor="end"
-              fontSize={11}
-              fontWeight={600}
-              fill="var(--text-secondary)"
-            >
-              {`${row.habit.emoji} ${tName(row.habit.name).slice(0, 8)}`}
-            </text>
-            {row.values.map((v, c) => {
-              const label =
-                v > 0
-                  ? t('{d} {name}: {v}', { d: formatDateShort(days[c]), name: tName(row.habit.name), v: `${fmt(v)}${unitOf(row)}` })
-                  : t('{d} {name}: 記録なし', { d: formatDateShort(days[c]), name: tName(row.habit.name) })
-              return (
-                <rect
-                  key={c}
-                  x={labelW + c * (cell + gap)}
-                  y={r * (cell + gap)}
-                  width={cell}
-                  height={cell}
-                  rx={3}
-                  fill={colorFor(v, row.max)}
-                  onPointerMove={(e) => show(e, label)}
-                  onPointerDown={(e) => show(e, label)}
-                  onPointerLeave={hide}
-                />
-              )
-            })}
-          </g>
+    <div className="matrix" style={{ position: 'relative' }}>
+      {/* 行ラベルは固定列にして、スクロールしても習慣名が見えるようにする */}
+      <div className="matrix-labels" style={{ paddingBottom: 16 }}>
+        {rows.map((row) => (
+          <span key={row.habit.id} style={{ height: cell + gap, lineHeight: `${cell}px` }}>
+            {row.habit.emoji} {tName(row.habit.name).slice(0, 6)}
+          </span>
         ))}
-        {days.map(
-          (day, c) =>
-            (c === days.length - 1 || c % 7 === 0) && (
-              <text
-                key={day}
-                x={labelW + c * (cell + gap) + cell / 2}
-                y={height - 3}
-                textAnchor="middle"
-                fontSize={9}
-                fill="var(--text-muted)"
-              >
-                {formatDateShort(day)}
-              </text>
-            ),
-        )}
-      </svg>
+      </div>
+      <div ref={wrapRef} style={{ overflowX: 'auto', flex: 1 }}>
+        <svg
+          width={width}
+          height={height}
+          style={{ display: 'block' }}
+          role="img"
+          aria-label="習慣ごとの日別サマリー"
+        >
+          {rows.map((row, r) => (
+            <g key={row.habit.id}>
+              {row.values.map((v, c) => {
+                const label =
+                  v > 0
+                    ? t('{d} {name}: {v}', { d: formatDateShort(days[c]), name: tName(row.habit.name), v: `${fmt(v)}${unitOf(row)}` })
+                    : t('{d} {name}: 記録なし', { d: formatDateShort(days[c]), name: tName(row.habit.name) })
+                return (
+                  <rect
+                    key={c}
+                    x={c * (cell + gap)}
+                    y={r * (cell + gap)}
+                    width={cell}
+                    height={cell}
+                    rx={3}
+                    fill={colorFor(v, row.max)}
+                    onPointerMove={(e) => show(e, label)}
+                    onPointerDown={(e) => show(e, label)}
+                    onPointerLeave={hide}
+                  />
+                )
+              })}
+            </g>
+          ))}
+          {days.map(
+            (day, c) =>
+              (c === days.length - 1 || c % 7 === 0) && (
+                <text
+                  key={day}
+                  x={c * (cell + gap) + cell / 2}
+                  y={height - 3}
+                  textAnchor="middle"
+                  fontSize={9}
+                  fill="var(--text-muted)"
+                >
+                  {formatDateShort(day)}
+                </text>
+              ),
+          )}
+        </svg>
+      </div>
       {tip && (
         <div className="chart-tooltip" style={{ left: tip.x, top: tip.y }}>
           {tip.text}

@@ -183,7 +183,7 @@ export default function App() {
       <SyncManager />
       <Onboarding />
       <UpdateBanner />
-      {tab === 'home' && <HomeView />}
+      {tab === 'home' && <HomeView onOpenStats={() => setTab('stats')} />}
       {tab === 'stats' && <StatsView />}
       {tab === 'habits' && <HabitsView />}
       {tab === 'settings' && <SettingsView />}

@@ -632,6 +632,36 @@ select:focus {
   color: var(--text-muted);
 }
 
+/* デイリーサマリー: 固定ラベル列 + スクロールするセル */
+.matrix {
+  display: flex;
+  gap: 8px;
+}
+
+.matrix-labels {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* ホーム冒頭のデイリーサマリー */
+.home-summary-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.home-summary-head h3 {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
 /* ヒートマップ */
 .heatmap-legend {
   display: flex;

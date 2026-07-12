@@ -348,6 +348,7 @@ const D: Record<string, [string, string, string, string]> = {
   '更新の確認に失敗しました ({s})': ['Failed to check for updates ({s})', '检查更新失败({s})', 'Error al buscar actualizaciones ({s})', 'فشل التحقق من التحديثات ({s})'],
   '不明': ['Unknown', '未知', 'Desconocido', 'غير معروف'],
   '習慣を追加すると統計が表示されます。': ['Add a habit to see stats.', '添加习惯后显示统计。', 'Añade un hábito para ver estadísticas.', 'أضف عادة لرؤية الإحصائيات.'],
+  '詳しく ▸': ['Details ▸', '详情 ▸', 'Más ▸', 'التفاصيل ▸'],
   '分': ['min', '分钟', 'min', 'د'],
   '時間': ['h', '小时', 'h', 'س'],
   'ページ': ['pg', '页', 'pág', 'صفحة'],
