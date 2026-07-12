@@ -6,7 +6,7 @@
  *
  * セットアップ手順は README の「メール同期の有効化」を参照。
  */
-export const SUPABASE_URL = ''
+export const SUPABASE_URL = 'https://ubxbhkjhhbcguxvlrspu.supabase.co'
 export const SUPABASE_ANON_KEY = ''
 
 export const emailSyncAvailable = (): boolean => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
