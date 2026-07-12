@@ -12,6 +12,7 @@ import {
   syncNow,
 } from '../lib/sync'
 import { emailSyncAvailable, GOOGLE_LOGIN_ENABLED, isNativeApp } from '../lib/backend'
+import { startNativeGoogleLogin } from '../lib/native-auth'
 
 /** マルチデバイス同期の設定(Google/メール/GitHub Gist) */
 function SyncSection() {
@@ -113,9 +114,12 @@ function SyncSection() {
             {method === 'email' &&
               (emailSyncAvailable() ? (
                 <>
-                  {GOOGLE_LOGIN_ENABLED && !isNativeApp() && (
+                  {GOOGLE_LOGIN_ENABLED && (
                     <>
-                      <button className="secondary-btn google-btn" onClick={startGoogleLogin}>
+                      <button
+                        className="secondary-btn google-btn"
+                        onClick={() => (isNativeApp() ? startNativeGoogleLogin() : startGoogleLogin())}
+                      >
                         <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden>
                           <path
                             fill="#4285F4"

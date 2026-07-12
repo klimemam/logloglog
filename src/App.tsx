@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { StoreProvider, useStore } from './store'
 import { HomeView } from './components/HomeView'
 import { StatsView } from './components/StatsView'
@@ -6,6 +6,8 @@ import { HabitsView } from './components/HabitsView'
 import { SettingsView } from './components/SettingsView'
 import { Sheet } from './components/Sheet'
 import { getSyncConfig, handleAuthRedirect, syncNow } from './lib/sync'
+import { isNativeApp } from './lib/backend'
+import { initNativeAuthListener } from './lib/native-auth'
 
 // Googleログインから戻ってきた場合、URLのトークンをセッションとして保存する
 // (レンダリング前に一度だけ処理する)
@@ -61,6 +63,9 @@ function Onboarding() {
 /** 同期が設定されていれば、起動時と変更のたび(2.5秒デバウンス)に自動同期する */
 function SyncManager() {
   const { data, dispatch } = useStore()
+  const dataRef = useRef(data)
+  dataRef.current = data
+
   useEffect(() => {
     if (!getSyncConfig()) return
     const t = setTimeout(() => {
@@ -68,6 +73,15 @@ function SyncManager() {
     }, 2500)
     return () => clearTimeout(t)
   }, [data, dispatch])
+
+  // ネイティブアプリ: 外部ブラウザでのGoogleログインからディープリンクで戻ったら同期開始
+  useEffect(() => {
+    if (!isNativeApp()) return
+    initNativeAuthListener(() => {
+      syncNow(dataRef.current, (merged) => dispatch({ type: 'import', data: merged }))
+    })
+  }, [dispatch])
+
   return null
 }
 

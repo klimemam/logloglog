@@ -211,10 +211,13 @@ export const supabaseSignIn = async (
   return toSession(j)
 }
 
-/** Googleログインへ遷移する(Supabase OAuth経由。戻り先はこのアプリ) */
+/** SupabaseのGoogle OAuth開始URL(認証後 redirectTo にトークン付きで戻される) */
+export const googleAuthUrl = (redirectTo: string): string =>
+  `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${encodeURIComponent(redirectTo)}`
+
+/** Googleログインへ遷移する(Web版: 戻り先はこのページ) */
 export const startGoogleLogin = () => {
-  const redirect = encodeURIComponent(location.origin + location.pathname)
-  location.href = `${SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to=${redirect}`
+  location.href = googleAuthUrl(location.origin + location.pathname)
 }
 
 const decodeJwtPayload = (jwt: string): { sub?: string; email?: string } => {
@@ -223,18 +226,14 @@ const decodeJwtPayload = (jwt: string): { sub?: string; email?: string } => {
 }
 
 /**
- * OAuthリダイレクトで戻ってきたときのURLハッシュ(#access_token=…)を処理する。
- * セッションを保存できたらtrue。エラーで戻ってきた場合はメッセージをstatusに出す。
+ * OAuthで戻されたURLフラグメント(access_token=…&refresh_token=…)から
+ * セッションを保存する。成功でtrue。エラーはstatusに出す。
  */
-export const handleAuthRedirect = (): boolean => {
-  const hash = location.hash
-  if (!hash || hash.length < 2) return false
-  const params = new URLSearchParams(hash.slice(1))
-  const clearHash = () => history.replaceState(null, '', location.pathname + location.search)
+export const applyAuthFragment = (fragment: string): boolean => {
+  const params = new URLSearchParams(fragment)
 
   const errDesc = params.get('error_description')
   if (errDesc) {
-    clearHash()
     setStatus({ state: 'error', message: `Googleログインに失敗しました: ${errDesc}` })
     return false
   }
@@ -255,11 +254,21 @@ export const handleAuthRedirect = (): boolean => {
         user_id: payload.sub,
       },
     })
-    clearHash()
     return true
   } catch {
     return false
   }
+}
+
+/** Web版: OAuthリダイレクトで戻ってきたときのURLハッシュを処理し、URLから消す */
+export const handleAuthRedirect = (): boolean => {
+  const hash = location.hash
+  if (!hash || hash.length < 2) return false
+  const ok = applyAuthFragment(hash.slice(1))
+  if (ok || hash.includes('error_description')) {
+    history.replaceState(null, '', location.pathname + location.search)
+  }
+  return ok
 }
 
 /** 期限が近ければリフレッシュし、有効なセッションを返す(設定にも保存) */
