@@ -1,316 +1,39 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../store'
-import type { Entry, Habit } from '../types'
+import type { Habit } from '../types'
 import { formatDateLong, todayKey } from '../lib/dates'
-import { aggregateByDay, currentStreak, recentExercises, thisWeekProgress } from '../lib/stats'
-import { bodyweightExercises, exerciseCatalog } from '../lib/exercises'
+import { aggregateByDay, currentStreak, thisWeekProgress } from '../lib/stats'
+import { Sheet } from './Sheet'
+import {
+  ExercisePicker,
+  WorkoutMode,
+  loadSession,
+  rowsFromLast,
+  saveSession,
+} from './Workout'
+import type { WorkoutSession } from './Workout'
 
 export const seriesVar = (slot: number) => `var(--series-${(slot % 8) + 1})`
 
 const metricLabel = (h: Habit, value: number) =>
   h.metric === 'none' ? '' : `${Number.isInteger(value) ? value : value.toFixed(1)}${h.unit}`
 
-const FREE_INPUT = '__free__'
-
-/** 下からスライドして出るボトムシート。open の切り替えで開閉アニメーションする */
-function Sheet({
-  open,
-  title,
-  onClose,
-  children,
-}: {
-  open: boolean
-  title: React.ReactNode
-  onClose: () => void
-  children: React.ReactNode
-}) {
-  const [render, setRender] = useState(open)
-  const [shown, setShown] = useState(false)
-
-  useEffect(() => {
-    if (open) {
-      setRender(true)
-      // マウント直後にクラスを付けるとtransitionが走らないため2フレーム待つ
-      const raf = requestAnimationFrame(() => requestAnimationFrame(() => setShown(true)))
-      return () => cancelAnimationFrame(raf)
-    }
-    setShown(false)
-    const t = setTimeout(() => setRender(false), 300)
-    return () => clearTimeout(t)
-  }, [open])
-
-  useEffect(() => {
-    if (!render) return
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.body.style.overflow = ''
-    }
-  }, [render])
-
-  if (!render) return null
-  return (
-    <div className={`sheet-overlay${shown ? ' open' : ''}`} onClick={onClose}>
-      <div className="sheet" role="dialog" aria-modal onClick={(e) => e.stopPropagation()}>
-        <div className="sheet-handle" />
-        <div className="sheet-title">{title}</div>
-        {children}
-      </div>
-    </div>
-  )
-}
-
-interface SetRow {
-  weight: string
-  reps: string
-}
-
-/** 前回のエントリからセット行のプリフィルを作る(セット詳細がない旧データは代表値で展開) */
-const rowsFromEntry = (e: Entry | undefined): SetRow[] => {
-  if (e?.setsDetail?.length) {
-    return e.setsDetail.map((s) => ({
-      weight: s.weight != null ? String(s.weight) : '',
-      reps: String(s.reps),
-    }))
-  }
-  if (e) {
-    const n = Math.max(1, e.sets ?? 3)
-    return Array.from({ length: n }, () => ({
-      weight: e.weight != null ? String(e.weight) : '',
-      reps: String(e.reps ?? 10),
-    }))
-  }
-  return Array.from({ length: 3 }, () => ({ weight: '', reps: '10' }))
-}
-
-/** セット間の休憩タイマー(終了時にバイブレーション) */
-function RestTimer() {
-  const [remain, setRemain] = useState<number | null>(null)
-  useEffect(() => {
-    if (remain == null || remain <= 0) return
-    const t = setTimeout(() => setRemain(remain - 1), 1000)
-    return () => clearTimeout(t)
-  }, [remain])
-  useEffect(() => {
-    if (remain === 0) navigator.vibrate?.([200, 100, 200])
-  }, [remain])
-
-  if (remain == null) {
-    return (
-      <div className="rest-timer">
-        <span>休憩:</span>
-        {[60, 90, 120].map((s) => (
-          <button key={s} className="chip" onClick={() => setRemain(s)}>
-            {Math.floor(s / 60)}:{String(s % 60).padStart(2, '0')}
-          </button>
-        ))}
-      </div>
-    )
-  }
-  return (
-    <div className="rest-timer">
-      <span className={`rest-count${remain === 0 ? ' done' : ''}`}>
-        {remain === 0
-          ? '休憩おわり! 💪'
-          : `残り ${Math.floor(remain / 60)}:${String(remain % 60).padStart(2, '0')}`}
-      </span>
-      <button className="chip" onClick={() => setRemain(null)}>
-        リセット
-      </button>
-    </div>
-  )
-}
-
-/**
- * 筋トレの記録フォーム(Burnfit式):
- * セットごとに重量×回数を個別に記録。前回の記録がプリフィルされ、±ボタンで素早く調整できる。
- */
-function StrengthLogger({
-  habit,
-  entries,
-  onLogged,
-  onClose,
-}: {
-  habit: Habit
-  entries: Entry[]
-  onLogged: () => void
-  onClose: () => void
-}) {
-  const { dispatch } = useStore()
-  const recent = useMemo(() => recentExercises(entries), [entries])
-  const [exercise, setExercise] = useState(recent[0] ?? '')
-  const [freeName, setFreeName] = useState('')
-  const isFree = exercise === FREE_INPUT
-  const chosenName = isFree ? freeName.trim() : exercise
-
-  const lastOfChosen = useMemo(
-    () => [...entries].reverse().find((e) => e.exercise === chosenName),
-    [entries, chosenName],
-  )
-  const [rows, setRows] = useState<SetRow[]>(() => rowsFromEntry(lastOfChosen))
-
-  // 種目を切り替えたら前回の記録でセット行を作り直す
-  useEffect(() => {
-    setRows(rowsFromEntry(lastOfChosen))
-  }, [lastOfChosen])
-
-  const bodyweight = bodyweightExercises.has(chosenName)
-  const lastRows = lastOfChosen ? rowsFromEntry(lastOfChosen) : []
-
-  const setRow = (i: number, patch: Partial<SetRow>) =>
-    setRows((rs) => rs.map((r, j) => (j === i ? { ...r, ...patch } : r)))
-
-  const step = (i: number, field: keyof SetRow, delta: number) =>
-    setRows((rs) =>
-      rs.map((r, j) => {
-        if (j !== i) return r
-        const cur = Number(r[field]) || 0
-        const next = Math.max(0, Math.round((cur + delta) * 10) / 10)
-        return { ...r, [field]: next === 0 && field === 'weight' ? '' : String(next) }
-      }),
-    )
-
-  const save = () => {
-    const setsDetail = rows
-      .map((r) => ({ weight: Number(r.weight) || undefined, reps: Number(r.reps) || 0 }))
-      .filter((s) => s.reps > 0)
-    if (!chosenName || setsDetail.length === 0) return
-    const weights = setsDetail.filter((s) => s.weight != null).map((s) => s.weight!)
-    dispatch({
-      type: 'addEntry',
-      habitId: habit.id,
-      exercise: chosenName,
-      setsDetail,
-      sets: setsDetail.length,
-      reps: Math.max(...setsDetail.map((s) => s.reps)),
-      weight: weights.length ? Math.max(...weights) : undefined,
-      value: setsDetail.length, // 週間ボリューム(総セット数)の集計用
-    })
-    onLogged()
-  }
-
-  return (
-    <div className="strength-form">
-      {recent.length > 0 && (
-        <div className="chip-row" style={{ marginBottom: 0 }}>
-          {recent.slice(0, 6).map((ex) => (
-            <button
-              key={ex}
-              className={`chip${exercise === ex ? ' active' : ''}`}
-              onClick={() => setExercise(ex)}
-            >
-              {ex}
-            </button>
-          ))}
-        </div>
-      )}
-      <select value={exercise} onChange={(e) => setExercise(e.target.value)} aria-label="種目">
-        <option value="" disabled>
-          種目を選ぶ…
-        </option>
-        {exerciseCatalog.map((g) => (
-          <optgroup key={g.group} label={g.group}>
-            {g.exercises.map((ex) => (
-              <option key={ex} value={ex}>
-                {ex}
-              </option>
-            ))}
-          </optgroup>
-        ))}
-        <option value={FREE_INPUT}>その他(自由入力)</option>
-      </select>
-      {isFree && (
-        <input
-          placeholder="種目名を入力"
-          value={freeName}
-          onChange={(e) => setFreeName(e.target.value)}
-        />
-      )}
-      {chosenName && (
-        <div className="set-table">
-          <div className="set-row set-head">
-            <span>セット</span>
-            <span>重量(kg)</span>
-            <span>回数</span>
-            <span />
-          </div>
-          {rows.map((r, i) => (
-            <div key={i} className="set-row">
-              <span className="set-no">
-                {i + 1}
-                {lastRows[i] && (
-                  <small>
-                    前回 {lastRows[i].weight ? `${lastRows[i].weight}kg×` : ''}
-                    {lastRows[i].reps}
-                  </small>
-                )}
-              </span>
-              <div className="stepper">
-                <button aria-label="重量を減らす" onClick={() => step(i, 'weight', -2.5)}>
-                  −
-                </button>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder={bodyweight ? '自重' : 'kg'}
-                  value={r.weight}
-                  onChange={(e) => setRow(i, { weight: e.target.value })}
-                />
-                <button aria-label="重量を増やす" onClick={() => step(i, 'weight', 2.5)}>
-                  +
-                </button>
-              </div>
-              <div className="stepper">
-                <button aria-label="回数を減らす" onClick={() => step(i, 'reps', -1)}>
-                  −
-                </button>
-                <input
-                  type="number"
-                  inputMode="numeric"
-                  value={r.reps}
-                  onChange={(e) => setRow(i, { reps: e.target.value })}
-                />
-                <button aria-label="回数を増やす" onClick={() => step(i, 'reps', 1)}>
-                  +
-                </button>
-              </div>
-              <button
-                className="set-remove"
-                aria-label={`${i + 1}セット目を削除`}
-                onClick={() => setRows((rs) => rs.filter((_, j) => j !== i))}
-                disabled={rows.length <= 1}
-              >
-                ✕
-              </button>
-            </div>
-          ))}
-          <button
-            className="secondary-btn"
-            style={{ padding: 8 }}
-            onClick={() => setRows((rs) => [...rs, { ...rs[rs.length - 1] }])}
-          >
-            + セットを追加
-          </button>
-        </div>
-      )}
-      {chosenName && <RestTimer />}
-      <div style={{ display: 'flex', gap: 8 }}>
-        <button className="secondary-btn" onClick={onClose}>
-          閉じる
-        </button>
-        <button className="primary-btn" onClick={save} disabled={!chosenName}>
-          記録
-        </button>
-      </div>
-    </div>
-  )
+interface ToastState {
+  text: string
+  /** セットすると「取り消す」でその習慣の直近エントリを削除できる */
+  undoHabitId?: string
 }
 
 function HabitCard({
   habit,
+  activeSession,
+  onStrengthTap,
   onLogged,
 }: {
   habit: Habit
-  onLogged: (entryId: string, name: string) => void
+  activeSession: boolean
+  onStrengthTap: (habit: Habit) => void
+  onLogged: (toast: ToastState) => void
 }) {
   const { data, dispatch } = useStore()
   const [open, setOpen] = useState(false)
@@ -328,9 +51,7 @@ function HabitCard({
 
   const log = (v?: number, n?: string) => {
     dispatch({ type: 'addEntry', habitId: habit.id, value: v, note: n || undefined })
-    // reducerが発番したIDはここでは取れないので、記録後の最新エントリを親に伝える方式にせず
-    // 「直近の記録を取り消す」トーストは habitId ベースで動かす
-    onLogged(habit.id, habit.name)
+    onLogged({ text: `${habit.name}を記録しました`, undoHabitId: habit.id })
   }
 
   const wash = `color-mix(in srgb, ${seriesVar(habit.colorSlot)} 13%, transparent)`
@@ -355,6 +76,7 @@ function HabitCard({
                 {week.count}/{week.target}
               </span>
             </span>
+            {activeSession && <span className="in-workout">ワークアウト中</span>}
             {streak > 0 && (
               <span className={`streak${streak >= 3 ? ' hot' : ''}`}>🔥 {streak}日連続</span>
             )}
@@ -368,82 +90,73 @@ function HabitCard({
           </div>
         </div>
         <button
-          className={`log-btn${todayEntries.length > 0 ? ' done' : ''}`}
-          aria-label={`${habit.name}を記録する`}
+          className={`log-btn${!isStrength && todayEntries.length > 0 ? ' done' : ''}${activeSession ? ' resume' : ''}`}
+          aria-label={
+            isStrength
+              ? activeSession
+                ? 'ワークアウトを再開する'
+                : 'ワークアウトを開始する'
+              : `${habit.name}を記録する`
+          }
           onClick={() =>
-            isStrength ? setOpen(true) : log(habit.metric === 'none' ? undefined : habit.defaultValue)
+            isStrength
+              ? onStrengthTap(habit)
+              : log(habit.metric === 'none' ? undefined : habit.defaultValue)
           }
         >
-          {!isStrength && todayEntries.length > 0 ? '✓' : '+'}
+          {isStrength ? (activeSession ? '▶' : '+') : todayEntries.length > 0 ? '✓' : '+'}
         </button>
       </div>
       {!isStrength && (
-        <button className="detail-toggle" onClick={() => setOpen(true)}>
-          詳しく記録する ▸
-        </button>
-      )}
-      {isStrength ? (
-        <Sheet
-          open={open}
-          title={
-            <>
-              {habit.emoji} {habit.name}を記録
-            </>
-          }
-          onClose={() => setOpen(false)}
-        >
-          <StrengthLogger
-            habit={habit}
-            entries={entries}
-            onLogged={() => onLogged(habit.id, habit.name)}
+        <>
+          <button className="detail-toggle" onClick={() => setOpen(true)}>
+            詳しく記録する ▸
+          </button>
+          <Sheet
+            open={open}
+            title={
+              <>
+                {habit.emoji} {habit.name}を記録
+              </>
+            }
             onClose={() => setOpen(false)}
-          />
-        </Sheet>
-      ) : (
-        <Sheet
-          open={open}
-          title={
-            <>
-              {habit.emoji} {habit.name}を記録
-            </>
-          }
-          onClose={() => setOpen(false)}
-        >
-          <div className="form-grid">
-            {habit.metric !== 'none' && (
+          >
+            <div className="form-grid">
+              {habit.metric !== 'none' && (
+                <label>
+                  記録値({habit.unit})
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    placeholder={habit.unit}
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                  />
+                </label>
+              )}
               <label>
-                記録値({habit.unit})
+                メモ(任意)
                 <input
-                  type="number"
-                  inputMode="decimal"
-                  placeholder={habit.unit}
-                  value={value}
-                  onChange={(e) => setValue(e.target.value)}
+                  type="text"
+                  placeholder="例: 調子よかった"
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
                 />
               </label>
-            )}
-            <label>
-              メモ(任意)
-              <input
-                type="text"
-                placeholder="例: 調子よかった"
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </label>
-            <button
-              className="primary-btn"
-              onClick={() => {
-                const v = habit.metric === 'none' ? undefined : Number(value) || undefined
-                log(v, note)
-                setNote('')
-                setOpen(false)
-              }}
-            >
-              記録する
-            </button>
-          </div>
-        </Sheet>
+              <button
+                className="primary-btn"
+                onClick={() => {
+                  const v = habit.metric === 'none' ? undefined : Number(value) || undefined
+                  log(v, note)
+                  setNote('')
+                  setOpen(false)
+                }}
+              >
+                記録する
+              </button>
+            </div>
+          </Sheet>
+        </>
       )}
     </div>
   )
@@ -451,7 +164,14 @@ function HabitCard({
 
 export function HomeView() {
   const { data, dispatch } = useStore()
-  const [toast, setToast] = useState<{ habitId: string; name: string } | null>(null)
+  const [toast, setToast] = useState<ToastState | null>(null)
+  const [session, setSession] = useState<WorkoutSession | null>(loadSession)
+  const [workoutOpen, setWorkoutOpen] = useState(false)
+  const [pickerFor, setPickerFor] = useState<Habit | null>(null)
+
+  useEffect(() => {
+    saveSession(session)
+  }, [session])
 
   useEffect(() => {
     if (!toast) return
@@ -460,16 +180,74 @@ export function HomeView() {
   }, [toast])
 
   const undo = () => {
-    if (!toast) return
-    // その習慣の一番新しいエントリを取り消す
+    if (!toast?.undoHabitId) return
     const latest = [...data.entries]
-      .filter((e) => e.habitId === toast.habitId)
+      .filter((e) => e.habitId === toast.undoHabitId)
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0]
     if (latest) dispatch({ type: 'deleteEntry', entryId: latest.id })
     setToast(null)
   }
 
   const habits = data.habits.filter((h) => !h.archived)
+  const sessionHabit = session ? habits.find((h) => h.id === session.habitId) : undefined
+  const sessionEntries = session
+    ? data.entries.filter((e) => e.habitId === session.habitId)
+    : []
+
+  // 筋トレの「+」: セッション中なら再開、なければ種目ピッカー(選んだ瞬間にワークアウトモードへ)
+  const onStrengthTap = (habit: Habit) => {
+    if (session && session.habitId === habit.id) {
+      setWorkoutOpen(true)
+    } else {
+      setPickerFor(habit)
+    }
+  }
+
+  const startWorkout = (habit: Habit, exerciseName: string) => {
+    const habitEntries = data.entries.filter((e) => e.habitId === habit.id)
+    const last = [...habitEntries].reverse().find((e) => e.exercise === exerciseName)
+    setSession({
+      habitId: habit.id,
+      startedAt: new Date().toISOString(),
+      exercises: [{ name: exerciseName, rows: rowsFromLast(last) }],
+    })
+    setWorkoutOpen(true)
+  }
+
+  const finishWorkout = () => {
+    if (!session) return
+    let exCount = 0
+    let setCount = 0
+    for (const ex of session.exercises) {
+      const done = ex.rows
+        .filter((r) => r.done)
+        .map((r) => ({ weight: Number(r.weight) || undefined, reps: Number(r.reps) || 0 }))
+        .filter((s) => s.reps > 0)
+      if (!done.length) continue
+      exCount += 1
+      setCount += done.length
+      const weights = done.filter((s) => s.weight != null).map((s) => s.weight!)
+      dispatch({
+        type: 'addEntry',
+        habitId: session.habitId,
+        exercise: ex.name,
+        setsDetail: done,
+        sets: done.length,
+        reps: Math.max(...done.map((s) => s.reps)),
+        weight: weights.length ? Math.max(...weights) : undefined,
+        value: done.length,
+      })
+    }
+    setSession(null)
+    setWorkoutOpen(false)
+    setToast({ text: `ワークアウトを記録しました 💪(${exCount}種目 ${setCount}セット)` })
+  }
+
+  const discardWorkout = () => {
+    if (!confirm('このワークアウトを記録せずに破棄しますか?')) return
+    setSession(null)
+    setWorkoutOpen(false)
+  }
 
   return (
     <>
@@ -479,16 +257,45 @@ export function HomeView() {
       </header>
       <main className="app-main">
         {habits.map((h) => (
-          <HabitCard key={h.id} habit={h} onLogged={(habitId, name) => setToast({ habitId, name })} />
+          <HabitCard
+            key={h.id}
+            habit={h}
+            activeSession={session?.habitId === h.id}
+            onStrengthTap={onStrengthTap}
+            onLogged={setToast}
+          />
         ))}
         {habits.length === 0 && (
           <p className="empty-note">習慣がありません。「習慣」タブから追加してください。</p>
         )}
       </main>
+
+      {/* 種目を選んだ瞬間にワークアウトモードへ遷移する */}
+      <ExercisePicker
+        open={pickerFor != null}
+        entries={pickerFor ? data.entries.filter((e) => e.habitId === pickerFor.id) : []}
+        onPick={(name) => {
+          if (pickerFor) startWorkout(pickerFor, name)
+        }}
+        onClose={() => setPickerFor(null)}
+      />
+
+      {workoutOpen && session && sessionHabit && (
+        <WorkoutMode
+          habit={sessionHabit}
+          entries={sessionEntries}
+          session={session}
+          onChange={setSession}
+          onFinish={finishWorkout}
+          onMinimize={() => setWorkoutOpen(false)}
+          onDiscard={discardWorkout}
+        />
+      )}
+
       {toast && (
         <div className="toast" role="status">
-          <span>{toast.name}を記録しました</span>
-          <button onClick={undo}>取り消す</button>
+          <span>{toast.text}</span>
+          {toast.undoHabitId && <button onClick={undo}>取り消す</button>}
         </div>
       )}
     </>
