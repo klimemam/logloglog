@@ -4,9 +4,11 @@ import type { Entry } from '../types'
 import {
   aggregateByDay,
   currentStreak,
+  dailyHabitMatrix,
   dailySeries,
   exerciseRecords,
   exerciseWeeklyBest,
+  habitInsights,
   intensityZone,
   levelFromXp,
   loadTrend,
@@ -16,7 +18,7 @@ import {
   weeklySeries,
   xpForEntries,
 } from '../lib/stats'
-import { WeeklyBarChart, TrendLineChart, CalendarHeatmap } from './charts'
+import { WeeklyBarChart, TrendLineChart, CalendarHeatmap, DailyMatrix } from './charts'
 import { seriesVar } from './HomeView'
 
 const trendText = {
@@ -159,6 +161,8 @@ export function StatsView() {
   const allDays = dailySeries(data.entries, 15 * 7)
   const color = seriesVar(habit.colorSlot)
   const isStrength = habit.kind === 'strength'
+  const matrix = dailyHabitMatrix(habits, data.entries, 28)
+  const insights = habitInsights(habits, data.entries, 56)
 
   return (
     <>
@@ -258,6 +262,43 @@ export function StatsView() {
               unit={habit.unit}
               color={color}
             />
+          </div>
+        )}
+
+        <div className="card chart-card">
+          <h3>デイリーサマリー</h3>
+          <p className="subtitle">
+            全習慣 × 日(直近4週)。濃さ = その日の量(各習慣の最大値比)。
+            睡眠や仕事と並べると、習慣の維持に何が効いているかが見えてくる
+          </p>
+          <DailyMatrix
+            rows={matrix.rows}
+            days={matrix.days}
+            unitOf={(row) => (row.habit.metric === 'none' ? '回' : row.habit.unit || '')}
+          />
+        </div>
+
+        {insights.length > 0 && (
+          <div className="card chart-card">
+            <h3>気づき</h3>
+            <p className="subtitle">直近8週の記録から。相関であって因果ではない点に注意(参考)</p>
+            <div className="insights">
+              {insights.map((ins, i) => {
+                const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
+                const unit = ins.bHabit.unit || ''
+                const more = ins.withAvg > ins.withoutAvg
+                return (
+                  <div key={i} className="insight-row">
+                    💡 <b>{ins.aHabit.emoji} {ins.aHabit.name}</b>をやった日は、
+                    <b>{ins.bHabit.emoji} {ins.bHabit.name}</b>が{more ? '多い' : '少ない'}:{' '}
+                    <span className="insight-nums">
+                      {fmt(ins.withAvg)}
+                      {unit} <small>vs {fmt(ins.withoutAvg)}{unit}</small>
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 

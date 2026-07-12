@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react'
-import type { WeekAgg } from '../lib/stats'
+import { useEffect, useRef, useState } from 'react'
+import type { MatrixRow, WeekAgg } from '../lib/stats'
 import { formatDateShort } from '../lib/dates'
 
 /** チャート内ホバー/タップのツールチップ状態 */
@@ -291,6 +291,104 @@ export function TrendLineChart({
           stroke="var(--baseline)"
           strokeWidth={1}
         />
+      </svg>
+      {tip && (
+        <div className="chart-tooltip" style={{ left: tip.x, top: tip.y }}>
+          {tip.text}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * デイリーサマリー: 行=習慣、列=日のマトリクス。
+ * セルの濃さ = その日の量をその習慣の期間内最大値で正規化した充実度
+ * (シーケンシャルblueランプ)。睡眠や仕事などの生活ログと習慣を
+ * 並べて見ることで、何が習慣の維持に効いているかを探れる。
+ */
+export function DailyMatrix({
+  rows,
+  days,
+  unitOf,
+}: {
+  rows: MatrixRow[]
+  days: string[]
+  unitOf: (row: MatrixRow) => string
+}) {
+  const { tip, wrapRef, show, hide } = useTooltip()
+  // 初期表示は最新の日(右端)に合わせる
+  useEffect(() => {
+    if (wrapRef.current) wrapRef.current.scrollLeft = wrapRef.current.scrollWidth
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+  const cell = 15
+  const gap = 3
+  const labelW = 92
+  const width = labelW + days.length * (cell + gap)
+  const height = rows.length * (cell + gap) + 16
+  const seq = ['var(--seq-0)', 'var(--seq-1)', 'var(--seq-2)', 'var(--seq-3)', 'var(--seq-4)']
+  const colorFor = (v: number, max: number) =>
+    v <= 0 ? seq[0] : seq[Math.min(4, Math.max(1, Math.ceil((v / max) * 4)))]
+  const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
+
+  return (
+    <div ref={wrapRef} style={{ position: 'relative', overflowX: 'auto' }}>
+      <svg
+        width={width}
+        height={height}
+        style={{ display: 'block' }}
+        role="img"
+        aria-label="習慣ごとの日別サマリー"
+      >
+        {rows.map((row, r) => (
+          <g key={row.habit.id}>
+            <text
+              x={labelW - 8}
+              y={r * (cell + gap) + cell - 3}
+              textAnchor="end"
+              fontSize={11}
+              fontWeight={600}
+              fill="var(--text-secondary)"
+            >
+              {`${row.habit.emoji} ${row.habit.name.slice(0, 5)}`}
+            </text>
+            {row.values.map((v, c) => {
+              const label = `${formatDateShort(days[c])} ${row.habit.name}: ${
+                v > 0 ? `${fmt(v)}${unitOf(row)}` : '記録なし'
+              }`
+              return (
+                <rect
+                  key={c}
+                  x={labelW + c * (cell + gap)}
+                  y={r * (cell + gap)}
+                  width={cell}
+                  height={cell}
+                  rx={3}
+                  fill={colorFor(v, row.max)}
+                  onPointerMove={(e) => show(e, label)}
+                  onPointerDown={(e) => show(e, label)}
+                  onPointerLeave={hide}
+                />
+              )
+            })}
+          </g>
+        ))}
+        {days.map(
+          (day, c) =>
+            (c === days.length - 1 || c % 7 === 0) && (
+              <text
+                key={day}
+                x={labelW + c * (cell + gap) + cell / 2}
+                y={height - 3}
+                textAnchor="middle"
+                fontSize={9}
+                fill="var(--text-muted)"
+              >
+                {formatDateShort(day)}
+              </text>
+            ),
+        )}
       </svg>
       {tip && (
         <div className="chart-tooltip" style={{ left: tip.x, top: tip.y }}>

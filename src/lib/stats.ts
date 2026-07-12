@@ -225,6 +225,84 @@ export const loadTrend = (entries: Entry[], habit: Habit): Trend => {
   return 'flat'
 }
 
+/* ===== デイリーサマリー(習慣×日)と気づき ===== */
+
+export interface MatrixRow {
+  habit: Habit
+  /** 日別の量(metric=noneは回数、それ以外は合計値)。未記録は0 */
+  values: number[]
+  /** 正規化用の最大値(最低1) */
+  max: number
+}
+
+/** 習慣×日のマトリクス(古い順の日付と、習慣ごとの日別量) */
+export const dailyHabitMatrix = (
+  habits: Habit[],
+  entries: Entry[],
+  nDays: number,
+): { days: string[]; rows: MatrixRow[] } => {
+  const days: string[] = []
+  let d = addDays(todayKey(), -(nDays - 1))
+  for (let i = 0; i < nDays; i++) {
+    days.push(d)
+    d = addDays(d, 1)
+  }
+  const rows = habits.map((h) => {
+    const byDay = new Map<string, number>()
+    for (const e of entries) {
+      if (e.habitId !== h.id) continue
+      byDay.set(e.date, (byDay.get(e.date) ?? 0) + (h.metric === 'none' ? 1 : (e.value ?? 0)))
+    }
+    const values = days.map((day) => byDay.get(day) ?? 0)
+    return { habit: h, values, max: Math.max(1, ...values) }
+  })
+  return { days, rows }
+}
+
+export interface Insight {
+  /** 「やった日/やらなかった日」で分ける側の習慣 */
+  aHabit: Habit
+  /** 量を比較する側の習慣(睡眠時間など) */
+  bHabit: Habit
+  withAvg: number
+  withoutAvg: number
+  /** 差の大きさ(標準偏差比)。並べ替え用 */
+  score: number
+}
+
+/**
+ * 「Aをやった日は、Bの量が平均どれだけ違うか」を全ペアで計算し、
+ * 差が目立つものを返す。Bが未記録の日は比較から除外する。
+ * あくまで相関であり因果ではない(UI側で「参考」と明示する)。
+ */
+export const habitInsights = (habits: Habit[], entries: Entry[], nDays: number): Insight[] => {
+  const { days, rows } = dailyHabitMatrix(habits, entries, nDays)
+  const out: Insight[] = []
+  const avg = (xs: number[]) => xs.reduce((s, v) => s + v, 0) / xs.length
+  for (const a of rows) {
+    for (const b of rows) {
+      if (a === b || b.habit.metric === 'none') continue
+      const withVals: number[] = []
+      const withoutVals: number[] = []
+      days.forEach((_, i) => {
+        const bv = b.values[i]
+        if (bv <= 0) return
+        if (a.values[i] > 0) withVals.push(bv)
+        else withoutVals.push(bv)
+      })
+      if (withVals.length < 4 || withoutVals.length < 4) continue
+      const all = [...withVals, ...withoutVals]
+      const m = avg(all)
+      const sd = Math.sqrt(avg(all.map((v) => (v - m) ** 2))) || 1
+      const withAvg = avg(withVals)
+      const withoutAvg = avg(withoutVals)
+      const score = Math.abs(withAvg - withoutAvg) / sd
+      if (score >= 0.4) out.push({ aHabit: a.habit, bHabit: b.habit, withAvg, withoutAvg, score })
+    }
+  }
+  return out.sort((x, y) => y.score - x.score).slice(0, 4)
+}
+
 /** 直近n日の日別集計(古い順)— ヒートマップ用 */
 export const dailySeries = (entries: Entry[], nDays: number): { date: string; count: number }[] => {
   const byDay = aggregateByDay(entries)

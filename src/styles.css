@@ -563,6 +563,33 @@ select:focus {
   z-index: 5;
 }
 
+/* 気づき(相関) */
+.insights {
+  display: grid;
+  gap: 10px;
+}
+
+.insight-row {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.insight-row b {
+  color: var(--text-primary);
+}
+
+.insight-nums {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.insight-nums small {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
 /* ヒートマップ */
 .heatmap-legend {
   display: flex;

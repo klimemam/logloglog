@@ -37,6 +37,9 @@ const presets: (Partial<Form> & { name: string; emoji: string })[] = [
   { name: '勉強', emoji: '📖', metric: 'duration', unit: '分', defaultValue: '30', colorSlot: 5, weeklyTarget: 5 },
   { name: '瞑想', emoji: '🧘', metric: 'duration', unit: '分', defaultValue: '10', colorSlot: 6, weeklyTarget: 7 },
   { name: 'ストレッチ', emoji: '🤸', metric: 'none', colorSlot: 7, weeklyTarget: 7 },
+  // 生活ログ: 統計の「デイリーサマリー」「気づき」で習慣との関係を見るための記録
+  { name: '睡眠', emoji: '😴', metric: 'duration', unit: '時間', defaultValue: '7', colorSlot: 5, weeklyTarget: 7 },
+  { name: '仕事', emoji: '💼', metric: 'duration', unit: '時間', defaultValue: '8', colorSlot: 3, weeklyTarget: 5 },
 ]
 
 function HabitForm({
