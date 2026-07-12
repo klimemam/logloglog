@@ -7,6 +7,7 @@
  * セットアップ手順は README の「メール同期の有効化」を参照。
  */
 export const SUPABASE_URL = 'https://ubxbhkjhhbcguxvlrspu.supabase.co'
-export const SUPABASE_ANON_KEY = 'sb_publishable_zhycX85qwpVxaYpWamzh5Q_It7Kl9hG'
+export const SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVieGJoa2poaGJjZ3V4dmxyc3B1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM4NTgxMzgsImV4cCI6MjA5OTQzNDEzOH0.y8nigscs12zSiaXXmPl8zzzhk2RfuswXVR-i8aW1u-8'
 
 export const emailSyncAvailable = (): boolean => Boolean(SUPABASE_URL && SUPABASE_ANON_KEY)
