@@ -272,18 +272,43 @@ export const handleAuthRedirect = (): boolean => {
   return ok
 }
 
-/** 期限が近ければリフレッシュし、有効なセッションを返す(設定にも保存) */
-const ensureSession = async (cfg: Extract<SyncConfig, { provider: 'supabase' }>): Promise<SupabaseSession> => {
-  if (cfg.session.expires_at - Date.now() > 60_000) return cfg.session
-  const res = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
-    method: 'POST',
-    headers: sbHeaders(),
-    body: JSON.stringify({ refresh_token: cfg.session.refresh_token }),
-  })
+/**
+ * 期限が近ければリフレッシュし、有効なセッションを返す(設定にも保存)。
+ * ログインを継続させるための工夫:
+ * - 期限の5分前から前倒しでリフレッシュ(失効ギリギリを避ける)
+ * - 別タブが先にリフレッシュ済みかもしれないので、最新の保存値を読み直す
+ * - 通信の一時失敗は自動リトライし、再ログインは要求しない。
+ *   トークンが本当に無効(400/401/403)なときだけ再ログインを案内する
+ */
+const ensureSession = async (
+  cfg: Extract<SyncConfig, { provider: 'supabase' }>,
+): Promise<SupabaseSession> => {
+  const latest = getSyncConfig()
+  const current = latest?.provider === 'supabase' ? latest : cfg
+  if (current.session.expires_at - Date.now() > 5 * 60_000) return current.session
+
+  const refresh = () =>
+    fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: sbHeaders(),
+      body: JSON.stringify({ refresh_token: current.session.refresh_token }),
+    })
+
+  let res = await refresh().catch(() => null)
+  if (!res || res.status >= 500) {
+    await new Promise((r) => setTimeout(r, 1500))
+    res = await refresh().catch(() => null)
+  }
+  if (!res) throw new Error(t('同期に失敗しました'))
   const j = (await res.json()) as AuthResponse
-  if (!res.ok) throw new Error(t('セッションの更新に失敗しました。同期を解除して再ログインしてください'))
+  if (!res.ok) {
+    if (res.status === 400 || res.status === 401 || res.status === 403) {
+      throw new Error(t('セッションの更新に失敗しました。同期を解除して再ログインしてください'))
+    }
+    throw new Error(t('同期に失敗しました'))
+  }
   const session = toSession(j)
-  setSyncConfig({ ...cfg, session })
+  setSyncConfig({ ...current, session })
   return session
 }
 

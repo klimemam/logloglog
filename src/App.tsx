@@ -122,6 +122,17 @@ function SyncManager() {
     })
   }, [dispatch])
 
+  // アプリに復帰したら同期(セッションの前倒し更新+他端末の変更の取り込み)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && getSyncConfig()) {
+        syncNow(dataRef.current, (merged) => dispatch({ type: 'import', data: merged }))
+      }
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [dispatch])
+
   return null
 }
 
