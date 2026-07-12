@@ -76,6 +76,16 @@ function HabitCard({
                 {week.count}/{week.target}
               </span>
             </span>
+            {/* +を押すと何が起きるかを事前に示す */}
+            {!activeSession && (
+              <span className="tap-hint">
+                {isStrength
+                  ? '+ でワークアウト開始'
+                  : habit.metric !== 'none' && habit.defaultValue != null
+                    ? `+ で ${habit.defaultValue}${habit.unit} を記録`
+                    : '+ で記録'}
+              </span>
+            )}
             {activeSession && <span className="in-workout">ワークアウト中</span>}
             {streak > 0 && (
               <span className={`streak${streak >= 3 ? ' hot' : ''}`}>🔥 {streak}日連続</span>

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Entry, Habit } from '../types'
-import { bodyweightExercises, exerciseCatalog } from '../lib/exercises'
+import { bodyweightExercises, exerciseCatalog, exerciseInfo } from '../lib/exercises'
 import { epley1RM, exerciseRecords, intensityZone, recentExercises } from '../lib/stats'
 import { Sheet } from './Sheet'
 
@@ -88,6 +88,7 @@ export function ExercisePicker({
   onClose: () => void
 }) {
   const [q, setQ] = useState('')
+  const [part, setPart] = useState<string>('') // '' = 最近/おすすめ表示
   const recent = useMemo(() => recentExercises(entries), [entries])
   const lastByExercise = useMemo(() => {
     const m = new Map<string, Entry>()
@@ -96,7 +97,10 @@ export function ExercisePicker({
   }, [entries])
 
   useEffect(() => {
-    if (!open) setQ('')
+    if (!open) {
+      setQ('')
+      setPart('')
+    }
   }, [open])
 
   const pick = (name: string) => {
@@ -106,16 +110,30 @@ export function ExercisePicker({
 
   const match = (name: string) => !q || name.includes(q)
   const catalogNames = new Set(exerciseCatalog.flatMap((g) => g.exercises))
+  const searching = q.trim().length > 0
 
   const Row = ({ name }: { name: string }) => {
     const last = lastByExercise.get(name)
+    const info = exerciseInfo(name)
+    const wash = `color-mix(in srgb, var(--series-${(info.colorSlot % 8) + 1}) 15%, transparent)`
     return (
       <button className="picker-row" onClick={() => pick(name)}>
-        <span className="picker-name">{name}</span>
-        <span className="picker-hint">{last ? lastSummary(last) : ''}</span>
+        <span className="picker-tile" style={{ background: wash }}>
+          {info.emoji}
+        </span>
+        <span className="picker-main">
+          <span className="picker-name">{name}</span>
+          <span className="picker-sub">
+            {info.group}
+            {last ? ` ・ ${lastSummary(last)}` : ''}
+          </span>
+        </span>
       </button>
     )
   }
+
+  // 表示するグループ: 検索中は全部位からヒットのみ / 部位選択中はその部位 / 既定は最近+全部位
+  const groups = exerciseCatalog.filter((g) => (searching || !part ? true : g.group === part))
 
   return (
     <Sheet open={open} title="種目を選ぶ" onClose={onClose}>
@@ -125,25 +143,46 @@ export function ExercisePicker({
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
-        {q.trim() && !catalogNames.has(q.trim()) && !recent.includes(q.trim()) && (
+        {!searching && (
+          <div className="chip-row" style={{ marginBottom: 0 }}>
+            <button className={`chip${part === '' ? ' active' : ''}`} onClick={() => setPart('')}>
+              すべて
+            </button>
+            {exerciseCatalog.map((g) => (
+              <button
+                key={g.group}
+                className={`chip${part === g.group ? ' active' : ''}`}
+                onClick={() => setPart(g.group)}
+              >
+                {g.emoji} {g.group}
+              </button>
+            ))}
+          </div>
+        )}
+        {searching && q.trim() && !catalogNames.has(q.trim()) && !recent.includes(q.trim()) && (
           <button className="picker-row picker-add" onClick={() => pick(q.trim())}>
-            <span className="picker-name">「{q.trim()}」を追加</span>
+            <span className="picker-tile">＋</span>
+            <span className="picker-main">
+              <span className="picker-name">「{q.trim()}」を追加</span>
+            </span>
           </button>
         )}
-        {recent.filter(match).length > 0 && (
+        {!part && recent.filter(match).length > 0 && (
           <div className="picker-group">
             <div className="picker-group-label">最近</div>
-            {recent.filter(match).slice(0, 8).map((name) => (
+            {recent.filter(match).slice(0, 6).map((name) => (
               <Row key={name} name={name} />
             ))}
           </div>
         )}
-        {exerciseCatalog.map((g) => {
-          const names = g.exercises.filter((n) => match(n) && !recent.includes(n))
+        {groups.map((g) => {
+          const names = g.exercises.filter((n) => match(n) && (part ? true : !recent.includes(n)))
           if (!names.length) return null
           return (
             <div key={g.group} className="picker-group">
-              <div className="picker-group-label">{g.group}</div>
+              <div className="picker-group-label">
+                {g.emoji} {g.group}
+              </div>
               {names.map((name) => (
                 <Row key={name} name={name} />
               ))}
@@ -277,7 +316,15 @@ export function WorkoutMode({
           return (
             <div key={ei} className="card exercise-card">
               <div className="exercise-head">
-                <div>
+                <div className="exercise-title">
+                  <span
+                    className="picker-tile"
+                    style={{
+                      background: `color-mix(in srgb, var(--series-${(exerciseInfo(ex.name).colorSlot % 8) + 1}) 15%, transparent)`,
+                    }}
+                  >
+                    {exerciseInfo(ex.name).emoji}
+                  </span>
                   <span className="exercise-name">{ex.name}</span>
                   {records.best1RM != null && (
                     <span className="exercise-best">ベスト1RM {records.best1RM}kg</span>
