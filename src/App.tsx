@@ -8,6 +8,46 @@ import { Sheet } from './components/Sheet'
 import { getSyncConfig, handleAuthRedirect, syncNow } from './lib/sync'
 import { isNativeApp } from './lib/backend'
 import { initNativeAuthListener } from './lib/native-auth'
+import { applyUpdate, checkForUpdate, dismissUpdate, isDismissed } from './lib/update'
+import type { UpdateResult } from './lib/update'
+
+/** 起動3秒後にバックグラウンドでアップデートを確認し、あればバナーを出す */
+function UpdateBanner() {
+  const [info, setInfo] = useState<UpdateResult | null>(null)
+
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      try {
+        const r = await checkForUpdate()
+        if (r.available && r.latest && !isDismissed(r.latest)) setInfo(r)
+      } catch {
+        // オフライン等では黙ってスキップ(設定タブから手動確認できる)
+      }
+    }, 3000)
+    return () => clearTimeout(t)
+  }, [])
+
+  if (!info) return null
+  const versionLabel = info.latest?.startsWith('v') ? ` ${info.latest}` : ''
+  return (
+    <div className="update-banner" role="status">
+      <span className="update-banner-text">🆕 新しいバージョン{versionLabel}があります</span>
+      <button className="update-banner-action" onClick={applyUpdate}>
+        {isNativeApp() ? 'ダウンロード' : '更新'}
+      </button>
+      <button
+        className="update-banner-close"
+        aria-label="この通知を閉じる"
+        onClick={() => {
+          dismissUpdate(info.latest ?? '')
+          setInfo(null)
+        }}
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
 
 // Googleログインから戻ってきた場合、URLのトークンをセッションとして保存する
 // (レンダリング前に一度だけ処理する)
@@ -131,6 +171,7 @@ export default function App() {
     <StoreProvider>
       <SyncManager />
       <Onboarding />
+      <UpdateBanner />
       {tab === 'home' && <HomeView />}
       {tab === 'stats' && <StatsView />}
       {tab === 'habits' && <HabitsView />}

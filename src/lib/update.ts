@@ -6,6 +6,7 @@
  *   変わっていればリロードで新版になる
  */
 import { App } from '@capacitor/app'
+import { Browser } from '@capacitor/browser'
 import { isNativeApp } from './backend'
 
 export const APK_URL =
@@ -52,8 +53,27 @@ const checkWeb = async (): Promise<UpdateResult> => {
   return {
     available: Boolean(latestName && currentName && latestName !== currentName),
     current: 'Web版',
+    latest: latestName, // バナーの「このバージョンは非表示にした」判定に使う
   }
 }
 
 export const checkForUpdate = (): Promise<UpdateResult> =>
   isNativeApp() ? checkNative() : checkWeb()
+
+/** 更新を適用する: APK版はダウンロードへ、Web版はリロード */
+export const applyUpdate = () => {
+  if (isNativeApp()) {
+    Browser.open({ url: APK_URL }).catch(() => {
+      location.href = APK_URL
+    })
+  } else {
+    location.reload()
+  }
+}
+
+const DISMISS_KEY = 'logloglog:update:dismissed'
+
+export const dismissUpdate = (latest: string) => localStorage.setItem(DISMISS_KEY, latest)
+
+export const isDismissed = (latest: string): boolean =>
+  localStorage.getItem(DISMISS_KEY) === latest
