@@ -5,7 +5,6 @@ import {
   aggregateByDay,
   currentStreak,
   dailySeries,
-  epley1RM,
   exerciseRecords,
   exerciseWeeklyBest,
   intensityZone,
