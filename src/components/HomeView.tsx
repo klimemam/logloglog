@@ -76,16 +76,6 @@ function HabitCard({
                 {week.count}/{week.target}
               </span>
             </span>
-            {/* +を押すと何が起きるかを事前に示す */}
-            {!activeSession && (
-              <span className="tap-hint">
-                {isStrength
-                  ? '+ でワークアウト開始'
-                  : habit.metric !== 'none' && habit.defaultValue != null
-                    ? `+ で ${habit.defaultValue}${habit.unit} を記録`
-                    : '+ で記録'}
-              </span>
-            )}
             {activeSession && <span className="in-workout">ワークアウト中</span>}
             {streak > 0 && (
               <span className={`streak${streak >= 3 ? ' hot' : ''}`}>🔥 {streak}日連続</span>
@@ -99,23 +89,33 @@ function HabitCard({
             )}
           </div>
         </div>
-        <button
-          className={`log-btn${!isStrength && todayEntries.length > 0 ? ' done' : ''}${activeSession ? ' resume' : ''}`}
-          aria-label={
-            isStrength
-              ? activeSession
-                ? 'ワークアウトを再開する'
-                : 'ワークアウトを開始する'
-              : `${habit.name}を記録する`
-          }
-          onClick={() =>
-            isStrength
-              ? onStrengthTap(habit)
-              : log(habit.metric === 'none' ? undefined : habit.defaultValue)
-          }
-        >
-          {isStrength ? (activeSession ? '▶' : '+') : todayEntries.length > 0 ? '✓' : '+'}
-        </button>
+        {/* ボタン自体が「押すと何が起きるか」を語る: ▶開始 / +5km / +✓ */}
+        {isStrength ? (
+          <button
+            className="log-pill"
+            aria-label={activeSession ? 'ワークアウトを再開する' : 'ワークアウトを開始する'}
+            onClick={() => onStrengthTap(habit)}
+          >
+            ▶ {activeSession ? '再開' : '開始'}
+          </button>
+        ) : habit.metric !== 'none' && habit.defaultValue != null ? (
+          <button
+            className={`log-pill${todayEntries.length > 0 ? ' done' : ''}`}
+            aria-label={`${habit.defaultValue}${habit.unit}を記録する`}
+            onClick={() => log(habit.defaultValue)}
+          >
+            +{habit.defaultValue}
+            {habit.unit}
+          </button>
+        ) : (
+          <button
+            className={`log-btn${todayEntries.length > 0 ? ' done' : ''}`}
+            aria-label={`${habit.name}を記録する`}
+            onClick={() => log(habit.metric === 'none' ? undefined : habit.defaultValue)}
+          >
+            {todayEntries.length > 0 ? '✓' : '+'}
+          </button>
+        )}
       </div>
       {!isStrength && (
         <>

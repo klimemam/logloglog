@@ -1104,15 +1104,30 @@ select:focus {
   font-size: 17px;
 }
 
-/* ワンタップで記録される内容のヒント */
-.tap-hint {
-  background: var(--accent-wash);
-  color: var(--accent);
-  font-weight: 700;
-  font-size: 11.5px;
-  border-radius: 12px;
-  padding: 2px 9px;
+/* ワンタップ記録のピルボタン: ボタン自体が内容を語る(+5km / ▶開始) */
+.log-pill {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 22px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(42, 120, 214, 0.35);
+  transition: transform 0.12s ease, background 0.2s, box-shadow 0.2s;
+}
+
+.log-pill:active {
+  transform: scale(0.94);
+}
+
+.log-pill.done {
+  background: var(--good);
+  box-shadow: 0 4px 12px rgba(12, 163, 12, 0.3);
 }
 
 /* ===== ボタン ===== */
