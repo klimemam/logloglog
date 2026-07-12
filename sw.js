@@ -18,6 +18,9 @@ self.addEventListener('fetch', (event) => {
   const req = event.request
   if (req.method !== 'GET' || !req.url.startsWith(self.location.origin)) return
 
+  // アップデート確認はキャッシュを迂回して常にネットワークへ
+  if (req.url.includes('update-check=')) return
+
   // ナビゲーションはネットワーク優先(更新を取り込む)、失敗時はキャッシュ
   if (req.mode === 'navigate') {
     event.respondWith(
