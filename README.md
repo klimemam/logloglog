@@ -42,14 +42,25 @@ PWA(ホーム画面への追加・オフライン動作)には **HTTPS 配信が
 
 | プラットフォーム | インストール方法 |
 |---|---|
+| **Android(アプリ版)** | [最新APKをダウンロード](https://github.com/klimemam/logloglog/releases/download/android-latest/LogLogLog.apk) してインストール(自己署名のため「提供元不明のアプリ」を許可) |
+| Android (Chrome/PWA) | メニュー →「アプリをインストール」 |
 | iPhone (Safari) | 共有メニュー →「ホーム画面に追加」 |
-| Android (Chrome) | メニュー →「アプリをインストール」 |
 | HarmonyOS | ブラウザでアクセスし「デスクトップに追加」(Huawei ブラウザ対応) |
 | Web / PC | ブラウザでそのまま利用。Chrome/Edge はアドレスバーのインストールアイコンから |
 
-ネイティブアプリとしてストア配信したくなった場合は、[Capacitor](https://capacitorjs.com/) で
-この Web アプリをそのまま iOS / Android にパッケージ化できます(HarmonyOS は
-[ArkTS の WebView ラッパー](https://developer.huawei.com/consumer/en/) で同様に可能)。
+### Androidアプリ(APK)について
+
+`android/` は [Capacitor](https://capacitorjs.com/) プロジェクトで、Webアプリをそのまま
+ネイティブアプリ化したもの。ブランチにプッシュするたびGitHub ActionsがAPKをビルドし、
+`android-latest` リリースに添付する(上の直リンクが常に最新)。
+
+- 署名キー `android/release.keystore` は**サイドロード配布用の自己署名キー**として
+  リポジトリにコミットしてある(公開リポジトリのため誰でも同じ署名を作れる点に注意)。
+  **Google Playで配信する場合は必ず非公開の鍵を作り直すこと**
+- アプリ版ではGoogleログインは非表示(WebView内でOAuthが完結しないため)。
+  メール/GitHub同期・引き継ぎコードは利用可能
+- iOS は `npx cap add ios` で同様にプロジェクト生成できるが、ビルドに Mac + Xcode +
+  Apple Developer Program($99/年)が必要。当面はPWA(ホーム画面に追加)を推奨
 
 ## メール同期の有効化(オーナー向け・1回だけ)
 

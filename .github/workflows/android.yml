@@ -1,0 +1,50 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [claude/habit-tracking-app-kjh1a9, main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-apk
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync android
+      - name: Build signed release APK
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon
+      - run: cp android/app/build/outputs/apk/release/app-release.apk LogLogLog.apk
+      # 固定タグのリリースに添付し、常に同じURLで最新版を配布する
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: LogLogLog Android版(最新ビルド)
+          body: |
+            AndroidスマホでこのAPKをダウンロードしてインストールしてください。
+            「提供元不明のアプリ」の許可を求められたら許可します(自己署名のため)。
+
+            直リンク: https://github.com/klimemam/logloglog/releases/download/android-latest/LogLogLog.apk
+          files: LogLogLog.apk

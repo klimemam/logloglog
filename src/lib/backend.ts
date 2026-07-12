@@ -14,3 +14,9 @@ export const emailSyncAvailable = (): boolean => Boolean(SUPABASE_URL && SUPABAS
 
 /** SupabaseのGoogleプロバイダを有効化済みならtrue(ログインボタンが出る) */
 export const GOOGLE_LOGIN_ENABLED = true
+
+/** Capacitorのネイティブアプリ内で動いているか(WebViewではOAuthリダイレクトが戻れない) */
+export const isNativeApp = (): boolean => {
+  const cap = (window as { Capacitor?: { isNativePlatform?: () => boolean } }).Capacitor
+  return Boolean(cap?.isNativePlatform?.())
+}
