@@ -58,8 +58,9 @@ function SyncSection() {
         ) : (
           <>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              GitHubアカウントの<b>シークレットGist</b>(非公開メモ)にデータを保存して、
-              スマホ・PCなど複数の端末で同じ記録を使えます。
+              <b>自分の</b>GitHubアカウントの<b>シークレットGist</b>(非公開メモ)にデータを保存して、
+              スマホ・PCなど複数の端末で同じ記録を使えます。GitHubアカウントは無料で作れます
+              (github.com)。
             </p>
             <ol style={{ fontSize: 12, color: 'var(--text-muted)', paddingLeft: 18, display: 'grid', gap: 4 }}>
               <li>
@@ -417,6 +418,33 @@ export function HabitsView() {
               </div>
             )
           })}
+        </div>
+
+        <h2 className="section-title">友達に教える</h2>
+        <div className="card" style={{ display: 'grid', gap: 8 }}>
+          <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+            このアプリは登録不要・無料で誰でも使えます。リンクを送るだけでOK。
+            相手の記録は相手の端末だけに保存され、あなたのデータとは完全に別です。
+          </p>
+          <button
+            className="primary-btn"
+            onClick={async () => {
+              const url = 'https://klimemam.github.io/logloglog/'
+              const text = '習慣記録アプリ LogLogLog — ワンタップで記録、筋トレはワークアウトモードで。登録不要・無料'
+              if (navigator.share) {
+                try {
+                  await navigator.share({ title: 'LogLogLog — 習慣ログ', text, url })
+                } catch {
+                  // 共有シートをキャンセルしただけなら何もしない
+                }
+              } else {
+                await navigator.clipboard.writeText(`${text}\n${url}`)
+                alert('リンクをコピーしました。友達に貼り付けて送ってください!')
+              }
+            }}
+          >
+            アプリのリンクを共有
+          </button>
         </div>
 
         <SyncSection />
