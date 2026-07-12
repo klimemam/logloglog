@@ -21,6 +21,8 @@ export interface Habit {
   /** タイム系(100マス計算など)で「値が小さいほど良い」場合にtrue */
   lowerIsBetter?: boolean
   createdAt: string
+  /** 端末間マージ時の新旧判定に使う(編集のたびに更新) */
+  updatedAt?: string
   archived?: boolean
 }
 
@@ -57,4 +59,7 @@ export interface AppData {
   version: 1
   habits: Habit[]
   entries: Entry[]
+  /** 削除の同期用トゥームストーン(他端末にもこの削除を伝播させる) */
+  deletedEntryIds?: string[]
+  deletedHabitIds?: string[]
 }

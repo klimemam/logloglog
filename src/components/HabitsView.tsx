@@ -1,7 +1,94 @@
-import { useRef, useState } from 'react'
+import { useEffect, useReducer, useRef, useState } from 'react'
 import { useStore } from '../store'
 import type { AppData, Habit, MetricType } from '../types'
 import { seriesVar } from './HomeView'
+import { getSyncConfig, getSyncStatus, setSyncConfig, subscribeSync, syncNow } from '../lib/sync'
+
+/** マルチデバイス同期の設定(GitHubシークレットGist) */
+function SyncSection() {
+  const { data, dispatch } = useStore()
+  const [, force] = useReducer((x: number) => x + 1, 0)
+  useEffect(() => subscribeSync(force), [])
+  const [token, setToken] = useState('')
+
+  const cfg = getSyncConfig()
+  const st = getSyncStatus()
+  const apply = (d: AppData) => dispatch({ type: 'import', data: d })
+
+  const connect = () => {
+    if (!token.trim()) return
+    setSyncConfig({ token: token.trim() })
+    setToken('')
+    syncNow(data, apply)
+  }
+
+  const fmtTime = (iso?: string) => {
+    if (!iso) return ''
+    const d = new Date(iso)
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+
+  return (
+    <>
+      <h2 className="section-title">マルチデバイス同期</h2>
+      <div className="card" style={{ display: 'grid', gap: 10 }}>
+        {cfg ? (
+          <>
+            <div className="sync-status">
+              {st.state === 'syncing' && <span>🔄 同期中…</span>}
+              {st.state === 'idle' && (
+                <span className="ok">
+                  ✅ 同期オン{st.lastSyncedAt && ` ・ 最終同期 ${fmtTime(st.lastSyncedAt)}`}
+                </span>
+              )}
+              {st.state === 'error' && <span className="err">⚠️ {st.message}</span>}
+            </div>
+            <button className="secondary-btn" onClick={() => syncNow(data, apply)}>
+              今すぐ同期
+            </button>
+            <button
+              className="text-btn danger"
+              onClick={() => {
+                if (confirm('同期を解除しますか?(この端末のデータは残ります)')) setSyncConfig(null)
+              }}
+            >
+              同期を解除
+            </button>
+          </>
+        ) : (
+          <>
+            <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
+              GitHubアカウントの<b>シークレットGist</b>(非公開メモ)にデータを保存して、
+              スマホ・PCなど複数の端末で同じ記録を使えます。
+            </p>
+            <ol style={{ fontSize: 12, color: 'var(--text-muted)', paddingLeft: 18, display: 'grid', gap: 4 }}>
+              <li>
+                GitHub → Settings → Developer settings → Personal access tokens →{' '}
+                <b>Tokens (classic)</b> → Generate new token
+              </li>
+              <li>
+                スコープは <b>gist だけ</b>にチェックして生成
+              </li>
+              <li>トークンを下に貼り付け(他の端末でも同じトークンを貼るだけ)</li>
+            </ol>
+            <input
+              type="password"
+              placeholder="ghp_… トークンを貼り付け"
+              value={token}
+              onChange={(e) => setToken(e.target.value)}
+            />
+            <button className="primary-btn" onClick={connect} disabled={!token.trim()}>
+              同期を開始
+            </button>
+            <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+              トークンはこの端末のブラウザ内にのみ保存され、GitHub以外には送信されません。
+            </p>
+          </>
+        )}
+      </div>
+    </>
+  )
+}
 
 /** フォーム上の「記録するもの」。strength は保存時に kind: 'strength' へ変換される */
 type FormMetric = MetricType | 'strength'
@@ -331,6 +418,8 @@ export function HabitsView() {
             )
           })}
         </div>
+
+        <SyncSection />
 
         <h2 className="section-title">データ</h2>
         <div className="card" style={{ display: 'grid', gap: 8 }}>

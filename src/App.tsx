@@ -1,8 +1,22 @@
-import { useState } from 'react'
-import { StoreProvider } from './store'
+import { useEffect, useState } from 'react'
+import { StoreProvider, useStore } from './store'
 import { HomeView } from './components/HomeView'
 import { StatsView } from './components/StatsView'
 import { HabitsView } from './components/HabitsView'
+import { getSyncConfig, syncNow } from './lib/sync'
+
+/** 同期が設定されていれば、起動時と変更のたび(2.5秒デバウンス)に自動同期する */
+function SyncManager() {
+  const { data, dispatch } = useStore()
+  useEffect(() => {
+    if (!getSyncConfig()) return
+    const t = setTimeout(() => {
+      syncNow(data, (merged) => dispatch({ type: 'import', data: merged }))
+    }, 2500)
+    return () => clearTimeout(t)
+  }, [data, dispatch])
+  return null
+}
 
 type Tab = 'home' | 'stats' | 'habits'
 
@@ -41,6 +55,7 @@ export default function App() {
 
   return (
     <StoreProvider>
+      <SyncManager />
       {tab === 'home' && <HomeView />}
       {tab === 'stats' && <StatsView />}
       {tab === 'habits' && <HabitsView />}

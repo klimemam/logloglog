@@ -8,9 +8,10 @@ const STORAGE_KEY = 'logloglog:v1'
 const uid = (): string =>
   `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 
+// デフォルト習慣は固定ID: 複数端末で同期したとき同一の習慣としてマージされる
 const defaultHabits = (): Habit[] => [
   {
-    id: uid(),
+    id: 'default-strength',
     name: '筋トレ',
     emoji: '💪',
     colorSlot: 0,
@@ -21,7 +22,7 @@ const defaultHabits = (): Habit[] => [
     createdAt: new Date().toISOString(),
   },
   {
-    id: uid(),
+    id: 'default-running',
     name: 'ランニング',
     emoji: '🏃',
     colorSlot: 1,
@@ -87,21 +88,30 @@ const reducer = (state: AppData, action: Action): AppData => {
       return { ...state, entries: [...state.entries, entry] }
     }
     case 'deleteEntry':
-      return { ...state, entries: state.entries.filter((e) => e.id !== action.entryId) }
+      return {
+        ...state,
+        entries: state.entries.filter((e) => e.id !== action.entryId),
+        // 同期先にも削除を伝えるため記録しておく(伸びすぎないよう直近5000件で打ち切り)
+        deletedEntryIds: [...(state.deletedEntryIds ?? []), action.entryId].slice(-5000),
+      }
     case 'addHabit': {
-      const habit: Habit = { ...action.habit, id: uid(), createdAt: new Date().toISOString() }
+      const now = new Date().toISOString()
+      const habit: Habit = { ...action.habit, id: uid(), createdAt: now, updatedAt: now }
       return { ...state, habits: [...state.habits, habit] }
     }
     case 'updateHabit':
       return {
         ...state,
-        habits: state.habits.map((h) => (h.id === action.habit.id ? action.habit : h)),
+        habits: state.habits.map((h) =>
+          h.id === action.habit.id ? { ...action.habit, updatedAt: new Date().toISOString() } : h,
+        ),
       }
     case 'deleteHabit':
       return {
         ...state,
         habits: state.habits.filter((h) => h.id !== action.habitId),
         entries: state.entries.filter((e) => e.habitId !== action.habitId),
+        deletedHabitIds: [...(state.deletedHabitIds ?? []), action.habitId].slice(-1000),
       }
     case 'import':
       return action.data
