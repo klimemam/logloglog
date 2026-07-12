@@ -5,7 +5,10 @@ import {
   aggregateByDay,
   currentStreak,
   dailySeries,
+  epley1RM,
+  exerciseRecords,
   exerciseWeeklyBest,
+  intensityZone,
   levelFromXp,
   loadTrend,
   recentExercises,
@@ -40,6 +43,25 @@ function ExerciseProgress({ entries, color }: { entries: Entry[]; color: string 
     return <p className="empty-note">種目を記録すると成長グラフが表示されます</p>
   }
   const { points, byWeight } = exerciseWeeklyBest(entries, exercise, 12)
+  const records = exerciseRecords(entries, exercise)
+  const history = [...entries]
+    .filter((e) => e.exercise === exercise)
+    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+    .slice(0, 5)
+
+  // セットの強度%(自己ベスト推定1RM比、100% = 自己ベスト)
+  const setBadge = (weight: number | undefined, reps: number) => {
+    if (weight != null && records.best1RM) {
+      const pct = Math.round((weight / records.best1RM) * 100)
+      return { pct, cls: intensityZone(pct) }
+    }
+    if (weight == null && reps > 0 && records.bestReps) {
+      const pct = Math.round((reps / records.bestReps) * 100)
+      return { pct, cls: intensityZone(pct) }
+    }
+    return null
+  }
+
   return (
     <>
       <div className="chip-row">
@@ -53,11 +75,60 @@ function ExerciseProgress({ entries, color }: { entries: Entry[]; color: string 
           </button>
         ))}
       </div>
+      <div className="records-row">
+        {records.best1RM != null && (
+          <div className="record">
+            <span className="record-label">推定1RMベスト</span>
+            <span className="record-value">{records.best1RM}kg</span>
+          </div>
+        )}
+        {records.bestWeight != null && (
+          <div className="record">
+            <span className="record-label">最大重量</span>
+            <span className="record-value">{records.bestWeight}kg</span>
+          </div>
+        )}
+        {records.bestReps != null && (
+          <div className="record">
+            <span className="record-label">最多回数</span>
+            <span className="record-value">{records.bestReps}回</span>
+          </div>
+        )}
+      </div>
       <p className="subtitle">
         {exercise} の週間ベスト
         {byWeight ? '推定1RM(重量×回数から換算した最大挙上重量)' : '回数(自重)'}(直近12週)
       </p>
       <TrendLineChart points={points} unit={byWeight ? 'kg' : '回'} color={color} />
+      {history.length > 0 && (
+        <div className="history">
+          <p className="subtitle" style={{ marginTop: 12 }}>
+            履歴(セットごとの強度 = 自己ベスト推定1RM比)
+          </p>
+          {history.map((e) => {
+            const sets = e.setsDetail?.length
+              ? e.setsDetail
+              : [{ weight: e.weight, reps: e.reps ?? 0 }]
+            return (
+              <div key={e.id} className="history-row">
+                <span className="history-date">{e.date.slice(5).replace('-', '/')}</span>
+                <span className="history-sets">
+                  {sets.map((s, i) => {
+                    const b = setBadge(s.weight, s.reps ?? 0)
+                    return (
+                      <span key={i} className="set-chip">
+                        {s.weight != null ? `${s.weight}kg×` : ''}
+                        {s.reps}
+                        {b && <em className={`intensity ${b.cls}`}>{b.pct}%</em>}
+                      </span>
+                    )
+                  })}
+                </span>
+              </div>
+            )
+          })}
+        </div>
+      )}
     </>
   )
 }

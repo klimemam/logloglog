@@ -142,6 +142,38 @@ export const exerciseWeeklyBest = (
   return { points: weeks.map((w) => ({ weekStart: w, value: best.get(w) ?? null })), byWeight }
 }
 
+/** 種目の自己ベスト(推定1RM・最大重量・最多回数)。強度%とPR判定の基準になる */
+export interface ExerciseRecords {
+  best1RM: number | null
+  bestWeight: number | null
+  bestReps: number | null
+}
+
+export const exerciseRecords = (entries: Entry[], exercise: string): ExerciseRecords => {
+  let best1RM: number | null = null
+  let bestWeight: number | null = null
+  let bestReps: number | null = null
+  for (const e of entries) {
+    if (e.exercise !== exercise) continue
+    const sets = e.setsDetail?.length
+      ? e.setsDetail
+      : [{ weight: e.weight, reps: e.reps ?? 0 }]
+    for (const s of sets) {
+      if (s.reps != null && s.reps > 0 && (bestReps == null || s.reps > bestReps)) bestReps = s.reps
+      if (s.weight != null) {
+        if (bestWeight == null || s.weight > bestWeight) bestWeight = s.weight
+        const rm = epley1RM(s.weight, s.reps || 1)
+        if (best1RM == null || rm > best1RM) best1RM = rm
+      }
+    }
+  }
+  return { best1RM, bestWeight, bestReps }
+}
+
+/** 強度%(自己ベスト推定1RMに対するその重量の割合)の表示ゾーン */
+export const intensityZone = (pct: number): 'low' | 'mid' | 'high' | 'max' =>
+  pct >= 90 ? 'max' : pct >= 80 ? 'high' : pct >= 60 ? 'mid' : 'low'
+
 /** 記録された種目を新しい順・重複なしで返す */
 export const recentExercises = (entries: Entry[]): string[] => {
   const seen = new Set<string>()

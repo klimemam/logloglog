@@ -33,6 +33,10 @@
   --shadow-float: 0 2px 6px rgba(20, 20, 15, 0.12), 0 12px 32px rgba(20, 20, 15, 0.18);
   --input-bg: #f0efec;
   --tabbar-bg: rgba(252, 252, 251, 0.86);
+  /* 強度ゾーンの文字色(サーフェス上でコントラストが取れる濃さ) */
+  --intensity-mid: #1c5cab;
+  --intensity-high: #a34a00;
+  --intensity-max: #c02b2b;
   color-scheme: light dark;
 }
 
@@ -67,6 +71,9 @@
     --shadow-float: 0 12px 40px rgba(0, 0, 0, 0.55);
     --input-bg: #2a2a28;
     --tabbar-bg: rgba(20, 20, 19, 0.86);
+    --intensity-mid: #86b6ef;
+    --intensity-high: #e5a05c;
+    --intensity-max: #e66767;
   }
 }
 
@@ -817,6 +824,107 @@ select:focus {
   font-size: 15px;
   font-weight: 700;
   letter-spacing: -0.01em;
+}
+
+.exercise-best {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+/* セット強度バッジ(自己ベスト推定1RM比) */
+.intensity {
+  font-style: normal;
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.intensity.low {
+  color: var(--text-muted);
+}
+
+.intensity.mid {
+  color: var(--intensity-mid);
+}
+
+.intensity.high {
+  color: var(--intensity-high);
+}
+
+.intensity.max {
+  color: var(--intensity-max);
+}
+
+.intensity.pr {
+  color: var(--good);
+}
+
+/* 自己ベスト(種目別の成長カード内) */
+.records-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.record {
+  background: var(--input-bg);
+  border-radius: 10px;
+  padding: 7px 12px;
+  display: grid;
+  gap: 1px;
+}
+
+.record-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.record-value {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* 履歴(直近のワークアウト、セットごとの強度つき) */
+.history-row {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--gridline);
+  font-size: 12.5px;
+  align-items: baseline;
+}
+
+.history-row:last-child {
+  border-bottom: none;
+}
+
+.history-date {
+  color: var(--text-muted);
+  font-weight: 600;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.history-sets {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.set-chip {
+  background: var(--input-bg);
+  border-radius: 8px;
+  padding: 3px 8px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  display: inline-flex;
+  gap: 5px;
+  align-items: baseline;
 }
 
 /* ワークアウト中のセット行: 完了チェック列つき */

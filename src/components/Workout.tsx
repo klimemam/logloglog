@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Entry, Habit } from '../types'
 import { bodyweightExercises, exerciseCatalog } from '../lib/exercises'
-import { recentExercises } from '../lib/stats'
+import { epley1RM, exerciseRecords, intensityZone, recentExercises } from '../lib/stats'
 import { Sheet } from './Sheet'
 
 /* ===== ワークアウトセッション(進行中の状態) ===== */
@@ -273,10 +273,16 @@ export function WorkoutMode({
       <div className="workout-body">
         {session.exercises.map((ex, ei) => {
           const bodyweight = bodyweightExercises.has(ex.name)
+          const records = exerciseRecords(entries, ex.name)
           return (
             <div key={ei} className="card exercise-card">
               <div className="exercise-head">
-                <span className="exercise-name">{ex.name}</span>
+                <div>
+                  <span className="exercise-name">{ex.name}</span>
+                  {records.best1RM != null && (
+                    <span className="exercise-best">ベスト1RM {records.best1RM}kg</span>
+                  )}
+                </div>
                 <button
                   className="text-btn danger"
                   onClick={() =>
@@ -293,9 +299,33 @@ export function WorkoutMode({
                   <span>回数</span>
                   <span />
                 </div>
-                {ex.rows.map((r, ri) => (
+                {ex.rows.map((r, ri) => {
+                  // 強度 = 自己ベスト推定1RMに対する重量の割合。ベスト更新見込みならPR表示
+                  const w = Number(r.weight) || 0
+                  const reps = Number(r.reps) || 0
+                  let badge: { text: string; cls: string } | null = null
+                  if (w > 0 && records.best1RM != null) {
+                    if (reps > 0 && epley1RM(w, reps) > records.best1RM) {
+                      badge = { text: 'PR!', cls: 'pr' }
+                    } else {
+                      const pct = Math.round((w / records.best1RM) * 100)
+                      badge = { text: `${pct}%`, cls: intensityZone(pct) }
+                    }
+                  } else if (bodyweight && reps > 0 && records.bestReps != null) {
+                    badge =
+                      reps > records.bestReps
+                        ? { text: 'PR!', cls: 'pr' }
+                        : {
+                            text: `${Math.round((reps / records.bestReps) * 100)}%`,
+                            cls: intensityZone(Math.round((reps / records.bestReps) * 100)),
+                          }
+                  }
+                  return (
                   <div key={ri} className={`set-row workout-set${r.done ? ' set-done' : ''}`}>
-                    <span className="set-no">{ri + 1}</span>
+                    <span className="set-no">
+                      {ri + 1}
+                      {badge && <small className={`intensity ${badge.cls}`}>{badge.text}</small>}
+                    </span>
                     <div className="stepper">
                       <button aria-label="重量を減らす" onClick={() => step(ei, ri, 'weight', -2.5)}>
                         −
@@ -333,7 +363,8 @@ export function WorkoutMode({
                       ✓
                     </button>
                   </div>
-                ))}
+                  )
+                })}
                 <button
                   className="secondary-btn add-set"
                   onClick={() =>
