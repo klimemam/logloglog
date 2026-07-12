@@ -14,7 +14,7 @@
 - **目標に対する維持の確認** — 習慣ごとに週の目標回数を設定。今週の達成状況、連続記録日数(ストリーク)、直近12週の回数バーチャート+目標ライン、直近15週の記録カレンダー(ヒートマップ)
 - **レベルの確認** — 記録を重ねると上がるレベル(XP制)と、直近4週の負荷(距離・時間・総セット数、タイム系はベストタイム)を前の4週と比較する「負荷トレンド」(レベルアップ中 / 維持 / ペースダウン)、週別ボリュームの推移チャート
 - **習慣のカスタマイズ** — 名前・絵文字・色・記録する指標(距離/時間/量/筋トレ/なし)・単位・週目標を自由に設定
-- **マルチデバイス同期** — GitHubアカウントの**シークレットGist**にデータを保存して端末間で自動同期(「習慣」タブで gist スコープのトークンを貼るだけ。各端末に同じトークンを設定)。追加はIDでマージ、削除はトゥームストーンで伝播、習慣の編集は新しい方が勝つため、同期の順序が前後しても壊れない。オフライン時はローカルに記録され、次の接続時に同期
+- **マルチデバイス同期(3方式)** — ①**メール+パスワード**(Supabase。下記の有効化が必要)、②**GitHubシークレットGist**(gistスコープのトークンを貼るだけ)、③**引き継ぎコード**(アカウント不要の1回転送。gzip圧縮したデータをコピペで移す)。①②は自動同期: 追加はIDでマージ、削除はトゥームストーンで伝播、習慣の編集は新しい方が勝つため、同期の順序が前後しても壊れない。オフライン時はローカルに記録され、次の接続時に同期
 - **データ管理** — 基本は端末内(localStorage)に保存(同期はオプション)。JSON でエクスポート/インポート
 - **オフライン対応** — Service Worker により、初回アクセス後はネットワークなしでも記録できます
 - ライト/ダークモード両対応、日本語 UI
@@ -50,6 +50,29 @@ PWA(ホーム画面への追加・オフライン動作)には **HTTPS 配信が
 ネイティブアプリとしてストア配信したくなった場合は、[Capacitor](https://capacitorjs.com/) で
 この Web アプリをそのまま iOS / Android にパッケージ化できます(HarmonyOS は
 [ArkTS の WebView ラッパー](https://developer.huawei.com/consumer/en/) で同様に可能)。
+
+## メール同期の有効化(オーナー向け・1回だけ)
+
+「メールで同期」はSupabase(無料枠あり)をバックエンドに使います。有効化手順:
+
+1. [supabase.com](https://supabase.com) で無料プロジェクトを作成
+2. SQL Editor で以下を実行(データテーブルと「本人しか読み書きできない」RLSポリシー):
+
+   ```sql
+   create table public.user_data (
+     user_id uuid primary key references auth.users (id) on delete cascade,
+     data jsonb not null,
+     updated_at timestamptz not null default now()
+   );
+   alter table public.user_data enable row level security;
+   create policy "own data" on public.user_data
+     for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+   ```
+
+3. Authentication → Sign In / Providers → Email の「**Confirm email**」を**オフ**にする(アプリ内でメール確認なしに登録を完結させるため)
+4. Project Settings → API の **Project URL** と **anon public key** を `src/lib/backend.ts` に貼ってデプロイ
+
+anon キーは公開前提のキーで、データ保護は手順2のRLSが担います。未設定の間、アプリでは「メール同期は準備中」と表示され、GitHub同期と引き継ぎコードはそのまま使えます。
 
 ## データ形式
 

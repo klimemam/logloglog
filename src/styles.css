@@ -1226,6 +1226,23 @@ select:focus {
   font-weight: 600;
 }
 
+textarea.transfer-code {
+  font: 11px/1.4 ui-monospace, monospace;
+  color: var(--text-secondary);
+  background: var(--input-bg);
+  border: 1.5px solid transparent;
+  border-radius: var(--radius-control);
+  padding: 10px 12px;
+  width: 100%;
+  resize: none;
+  word-break: break-all;
+}
+
+textarea.transfer-code:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .sync-status .ok {
   color: var(--good);
 }

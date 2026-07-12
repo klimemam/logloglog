@@ -2,24 +2,57 @@ import { useEffect, useReducer, useRef, useState } from 'react'
 import { useStore } from '../store'
 import type { AppData, Habit, MetricType } from '../types'
 import { seriesVar } from './HomeView'
-import { getSyncConfig, getSyncStatus, setSyncConfig, subscribeSync, syncNow } from '../lib/sync'
+import {
+  getSyncConfig,
+  getSyncStatus,
+  mergeData,
+  setSyncConfig,
+  subscribeSync,
+  supabaseSignIn,
+  syncNow,
+} from '../lib/sync'
+import { emailSyncAvailable } from '../lib/backend'
 
-/** マルチデバイス同期の設定(GitHubシークレットGist) */
+/** マルチデバイス同期の設定(メール / GitHub Gist) */
 function SyncSection() {
   const { data, dispatch } = useStore()
   const [, force] = useReducer((x: number) => x + 1, 0)
   useEffect(() => subscribeSync(force), [])
+  const [method, setMethod] = useState<'email' | 'github'>(emailSyncAvailable() ? 'email' : 'github')
   const [token, setToken] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [authError, setAuthError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   const cfg = getSyncConfig()
   const st = getSyncStatus()
   const apply = (d: AppData) => dispatch({ type: 'import', data: d })
 
-  const connect = () => {
+  const connectGithub = () => {
     if (!token.trim()) return
-    setSyncConfig({ token: token.trim() })
+    setSyncConfig({ provider: 'gist', token: token.trim() })
     setToken('')
     syncNow(data, apply)
+  }
+
+  const connectEmail = async (mode: 'signin' | 'signup') => {
+    if (!email.trim() || password.length < 6) {
+      setAuthError('メールアドレスと6文字以上のパスワードを入力してください')
+      return
+    }
+    setBusy(true)
+    setAuthError('')
+    try {
+      const session = await supabaseSignIn(email.trim(), password, mode)
+      setSyncConfig({ provider: 'supabase', email: email.trim(), session })
+      setPassword('')
+      syncNow(data, apply)
+    } catch (err) {
+      setAuthError(err instanceof Error ? err.message : 'ログインに失敗しました')
+    } finally {
+      setBusy(false)
+    }
   }
 
   const fmtTime = (iso?: string) => {
@@ -38,7 +71,9 @@ function SyncSection() {
               {st.state === 'syncing' && <span>🔄 同期中…</span>}
               {st.state === 'idle' && (
                 <span className="ok">
-                  ✅ 同期オン{st.lastSyncedAt && ` ・ 最終同期 ${fmtTime(st.lastSyncedAt)}`}
+                  ✅ 同期オン(
+                  {cfg.provider === 'supabase' ? cfg.email : 'GitHub'})
+                  {st.lastSyncedAt && ` ・ 最終同期 ${fmtTime(st.lastSyncedAt)}`}
                 </span>
               )}
               {st.state === 'error' && <span className="err">⚠️ {st.message}</span>}
@@ -58,33 +93,199 @@ function SyncSection() {
         ) : (
           <>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>
-              <b>自分の</b>GitHubアカウントの<b>シークレットGist</b>(非公開メモ)にデータを保存して、
-              スマホ・PCなど複数の端末で同じ記録を使えます。GitHubアカウントは無料で作れます
-              (github.com)。
+              スマホ・PCなど複数の端末で同じ記録を使えます。データは自分専用の保存先に入り、
+              他の人からは見えません。
             </p>
-            <ol style={{ fontSize: 12, color: 'var(--text-muted)', paddingLeft: 18, display: 'grid', gap: 4 }}>
-              <li>
-                GitHub → Settings → Developer settings → Personal access tokens →{' '}
-                <b>Tokens (classic)</b> → Generate new token
-              </li>
-              <li>
-                スコープは <b>gist だけ</b>にチェックして生成
-              </li>
-              <li>トークンを下に貼り付け(他の端末でも同じトークンを貼るだけ)</li>
-            </ol>
-            <input
-              type="password"
-              placeholder="ghp_… トークンを貼り付け"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-            />
-            <button className="primary-btn" onClick={connect} disabled={!token.trim()}>
-              同期を開始
-            </button>
-            <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-              トークンはこの端末のブラウザ内にのみ保存され、GitHub以外には送信されません。
-            </p>
+            <div className="chip-row" style={{ marginBottom: 0 }}>
+              <button
+                className={`chip${method === 'email' ? ' active' : ''}`}
+                onClick={() => setMethod('email')}
+              >
+                📧 メールで同期
+              </button>
+              <button
+                className={`chip${method === 'github' ? ' active' : ''}`}
+                onClick={() => setMethod('github')}
+              >
+                🐙 GitHubで同期
+              </button>
+            </div>
+            {method === 'email' &&
+              (emailSyncAvailable() ? (
+                <>
+                  <input
+                    type="email"
+                    placeholder="メールアドレス"
+                    value={email}
+                    autoComplete="email"
+                    onChange={(e) => setEmail(e.target.value)}
+                  />
+                  <input
+                    type="password"
+                    placeholder="パスワード(6文字以上)"
+                    value={password}
+                    autoComplete="current-password"
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                  {authError && (
+                    <p style={{ fontSize: 12, color: 'var(--series-6)', fontWeight: 600 }}>{authError}</p>
+                  )}
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="secondary-btn" disabled={busy} onClick={() => connectEmail('signup')}>
+                      新規登録
+                    </button>
+                    <button className="primary-btn" disabled={busy} onClick={() => connectEmail('signin')}>
+                      ログイン
+                    </button>
+                  </div>
+                  <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    他の端末でも同じメールとパスワードでログインすれば、記録が自動で同期されます。
+                  </p>
+                </>
+              ) : (
+                <p style={{ fontSize: 12.5, color: 'var(--text-muted)' }}>
+                  メール同期は現在準備中です。GitHubでの同期か、下の「引き継ぎコード」を使ってください。
+                </p>
+              ))}
+            {method === 'github' && (
+              <>
+                <ol style={{ fontSize: 12, color: 'var(--text-muted)', paddingLeft: 18, display: 'grid', gap: 4 }}>
+                  <li>
+                    GitHub → Settings → Developer settings → Personal access tokens →{' '}
+                    <b>Tokens (classic)</b> → Generate new token
+                  </li>
+                  <li>
+                    スコープは <b>gist だけ</b>にチェックして生成
+                  </li>
+                  <li>トークンを下に貼り付け(他の端末でも同じトークンを貼るだけ)</li>
+                </ol>
+                <input
+                  type="password"
+                  placeholder="ghp_… トークンを貼り付け"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                />
+                <button className="primary-btn" onClick={connectGithub} disabled={!token.trim()}>
+                  同期を開始
+                </button>
+                <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                  データは自分のGitHubアカウントの非公開Gistに保存されます。トークンはこの端末の
+                  ブラウザ内にのみ保存されます。
+                </p>
+              </>
+            )}
           </>
+        )}
+      </div>
+    </>
+  )
+}
+
+/* ===== 引き継ぎコード(アカウント不要の端末間転送) ===== */
+
+const bytesToB64 = (bytes: Uint8Array): string => {
+  let bin = ''
+  const CHUNK = 0x8000
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + CHUNK))
+  }
+  return btoa(bin)
+}
+
+const b64ToBytes = (b64: string): Uint8Array => Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))
+
+const encodeTransfer = async (data: AppData): Promise<string> => {
+  const json = JSON.stringify(data)
+  if ('CompressionStream' in window) {
+    const stream = new Blob([json]).stream().pipeThrough(new CompressionStream('gzip'))
+    const buf = new Uint8Array(await new Response(stream).arrayBuffer())
+    return `GZ1.${bytesToB64(buf)}`
+  }
+  return `B1.${bytesToB64(new TextEncoder().encode(json))}`
+}
+
+const decodeTransfer = async (code: string): Promise<AppData> => {
+  const trimmed = code.trim()
+  let json: string
+  if (trimmed.startsWith('GZ1.')) {
+    const stream = new Blob([b64ToBytes(trimmed.slice(4)) as BlobPart])
+      .stream()
+      .pipeThrough(new DecompressionStream('gzip'))
+    json = await new Response(stream).text()
+  } else if (trimmed.startsWith('B1.')) {
+    json = new TextDecoder().decode(b64ToBytes(trimmed.slice(3)))
+  } else {
+    throw new Error('引き継ぎコードの形式が違います')
+  }
+  const parsed = JSON.parse(json) as AppData
+  if (parsed.version !== 1 || !Array.isArray(parsed.habits) || !Array.isArray(parsed.entries)) {
+    throw new Error('引き継ぎコードの内容が壊れています')
+  }
+  return parsed
+}
+
+function TransferSection() {
+  const { data, dispatch } = useStore()
+  const [outCode, setOutCode] = useState('')
+  const [inCode, setInCode] = useState('')
+  const [message, setMessage] = useState('')
+
+  return (
+    <>
+      <h2 className="section-title">引き継ぎコード(アカウント不要)</h2>
+      <div className="card" style={{ display: 'grid', gap: 8 }}>
+        <p style={{ fontSize: 12.5, color: 'var(--text-secondary)' }}>
+          今のデータをコードにして別の端末へコピーできます(1回きりの転送。自動同期はされません)。
+        </p>
+        <button
+          className="secondary-btn"
+          onClick={async () => {
+            const code = await encodeTransfer(data)
+            setOutCode(code)
+            try {
+              await navigator.clipboard.writeText(code)
+              setMessage('コードをコピーしました。別の端末に貼り付けてください')
+            } catch {
+              setMessage('下のコードを全選択してコピーしてください')
+            }
+          }}
+        >
+          引き継ぎコードを作成
+        </button>
+        {outCode && (
+          <textarea
+            className="transfer-code"
+            readOnly
+            value={outCode}
+            rows={3}
+            onFocus={(e) => e.currentTarget.select()}
+          />
+        )}
+        <textarea
+          className="transfer-code"
+          placeholder="別の端末で作ったコードをここに貼り付け"
+          value={inCode}
+          rows={3}
+          onChange={(e) => setInCode(e.target.value)}
+        />
+        <button
+          className="secondary-btn"
+          disabled={!inCode.trim()}
+          onClick={async () => {
+            try {
+              const incoming = await decodeTransfer(inCode)
+              dispatch({ type: 'import', data: mergeData(data, incoming) })
+              setInCode('')
+              setMessage('取り込みました(既存の記録とマージ済み)')
+            } catch (err) {
+              setMessage(err instanceof Error ? err.message : '読み込みに失敗しました')
+            }
+          }}
+        >
+          コードを取り込む
+        </button>
+        {message && (
+          <p style={{ fontSize: 12, color: 'var(--text-secondary)', fontWeight: 600 }}>{message}</p>
         )}
       </div>
     </>
@@ -448,6 +649,8 @@ export function HabitsView() {
         </div>
 
         <SyncSection />
+
+        <TransferSection />
 
         <h2 className="section-title">データ</h2>
         <div className="card" style={{ display: 'grid', gap: 8 }}>
