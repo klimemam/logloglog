@@ -20,19 +20,20 @@ import {
 } from '../lib/stats'
 import { WeeklyBarChart, TrendLineChart, CalendarHeatmap, DailyMatrix } from './charts'
 import { seriesVar } from './HomeView'
+import { t } from '../lib/i18n'
 
 const trendText = {
-  up: { label: '↑ レベルアップ中', cls: 'up', desc: '直近4週の負荷が前の4週より増えています' },
-  flat: { label: '→ 維持', cls: '', desc: '直近4週の負荷は前の4週とほぼ同じです' },
-  down: { label: '↓ ペースダウン', cls: 'down', desc: '直近4週の負荷が前の4週より減っています' },
-  none: { label: 'まだデータ不足', cls: '', desc: '記録を続けると傾向が表示されます' },
+  up: { label: t('↑ レベルアップ中'), cls: 'up', desc: t('直近4週の負荷が前の4週より増えています') },
+  flat: { label: t('→ 維持'), cls: '', desc: t('直近4週の負荷は前の4週とほぼ同じです') },
+  down: { label: t('↓ ペースダウン'), cls: 'down', desc: t('直近4週の負荷が前の4週より減っています') },
+  none: { label: t('まだデータ不足'), cls: '', desc: t('記録を続けると傾向が表示されます') },
 } as const
 
 const trendTextTime = {
-  up: { label: '↑ レベルアップ中', cls: 'up', desc: '直近4週のベストタイムが縮んでいます' },
-  flat: { label: '→ 維持', cls: '', desc: '直近4週のタイムは前の4週とほぼ同じです' },
-  down: { label: '↓ ペースダウン', cls: 'down', desc: '直近4週のタイムが前の4週より伸びています' },
-  none: { label: 'まだデータ不足', cls: '', desc: '記録を続けると傾向が表示されます' },
+  up: { label: t('↑ レベルアップ中'), cls: 'up', desc: t('直近4週のベストタイムが縮んでいます') },
+  flat: { label: t('→ 維持'), cls: '', desc: t('直近4週のタイムは前の4週とほぼ同じです') },
+  down: { label: t('↓ ペースダウン'), cls: 'down', desc: t('直近4週のタイムが前の4週より伸びています') },
+  none: { label: t('まだデータ不足'), cls: '', desc: t('記録を続けると傾向が表示されます') },
 } as const
 
 /** 筋トレ習慣の種目別ベスト(最大重量 / 自重種目は最大回数)チャート */
@@ -41,7 +42,7 @@ function ExerciseProgress({ entries, color }: { entries: Entry[]; color: string 
   const [selected, setSelected] = useState<string | null>(null)
   const exercise = selected && exercises.includes(selected) ? selected : exercises[0]
   if (!exercise) {
-    return <p className="empty-note">種目を記録すると成長グラフが表示されます</p>
+    return <p className="empty-note">{t('種目を記録すると成長グラフが表示されます')}</p>
   }
   const { points, byWeight } = exerciseWeeklyBest(entries, exercise, 12)
   const records = exerciseRecords(entries, exercise)
@@ -72,39 +73,40 @@ function ExerciseProgress({ entries, color }: { entries: Entry[]; color: string 
             className={`chip${ex === exercise ? ' active' : ''}`}
             onClick={() => setSelected(ex)}
           >
-            {ex}
+            {t(ex)}
           </button>
         ))}
       </div>
       <div className="records-row">
         {records.best1RM != null && (
           <div className="record">
-            <span className="record-label">推定1RMベスト</span>
+            <span className="record-label">{t('推定1RMベスト')}</span>
             <span className="record-value">{records.best1RM}kg</span>
           </div>
         )}
         {records.bestWeight != null && (
           <div className="record">
-            <span className="record-label">最大重量</span>
+            <span className="record-label">{t('最大重量')}</span>
             <span className="record-value">{records.bestWeight}kg</span>
           </div>
         )}
         {records.bestReps != null && (
           <div className="record">
-            <span className="record-label">最多回数</span>
-            <span className="record-value">{records.bestReps}回</span>
+            <span className="record-label">{t('最多回数')}</span>
+            <span className="record-value">{records.bestReps}{t('回')}</span>
           </div>
         )}
       </div>
       <p className="subtitle">
-        {exercise} の週間ベスト
-        {byWeight ? '推定1RM(重量×回数から換算した最大挙上重量)' : '回数(自重)'}(直近12週)
+        {byWeight
+          ? t('{ex} の週間ベスト推定1RM(重量×回数から換算した最大挙上重量)(直近12週)', { ex: t(exercise) })
+          : t('{ex} の週間ベスト回数(自重)(直近12週)', { ex: t(exercise) })}
       </p>
-      <TrendLineChart points={points} unit={byWeight ? 'kg' : '回'} color={color} />
+      <TrendLineChart points={points} unit={byWeight ? 'kg' : t('回')} color={color} />
       {history.length > 0 && (
         <div className="history">
           <p className="subtitle" style={{ marginTop: 12 }}>
-            履歴(セットごとの強度 = 自己ベスト推定1RM比)
+            {t('履歴(セットごとの強度 = 自己ベスト推定1RM比)')}
           </p>
           {history.map((e) => {
             const sets = e.setsDetail?.length
@@ -148,7 +150,7 @@ export function StatsView() {
   if (!habit) {
     return (
       <main className="app-main">
-        <p className="empty-note">習慣を追加すると統計が表示されます。</p>
+        <p className="empty-note">{t('習慣を追加すると統計が表示されます。')}</p>
       </main>
     )
   }
@@ -167,8 +169,8 @@ export function StatsView() {
   return (
     <>
       <header className="app-header">
-        <h1>統計</h1>
-        <div className="date">目標に対する習慣の維持と、レベルの推移</div>
+        <h1>{t('統計')}</h1>
+        <div className="date">{t('目標に対する習慣の維持と、レベルの推移')}</div>
       </header>
       <main className="app-main">
         <div className="chip-row">
@@ -186,35 +188,35 @@ export function StatsView() {
 
         <div className="tile-grid">
           <div className="stat-tile">
-            <div className="label">今週の達成</div>
+            <div className="label">{t('今週の達成')}</div>
             <div className="value">
               {week.count}
-              <small> / {week.target}回</small>
+              <small>{t(' / {n}回', { n: week.target })}</small>
             </div>
             <div className={`delta${week.done ? ' up' : ''}`}>
-              {week.done ? '🎉 目標達成!' : `あと${week.target - week.count}回`}
+              {week.done ? t('🎉 目標達成!') : t('あと{n}回', { n: week.target - week.count })}
             </div>
           </div>
           <div className="stat-tile">
-            <div className="label">連続記録</div>
+            <div className="label">{t('連続記録')}</div>
             <div className="value">
               {streak}
-              <small> 日</small>
+              <small> {t('日')}</small>
             </div>
-            <div className="delta">{streak >= 3 ? '🔥 いい調子!' : '毎日続けよう'}</div>
+            <div className="delta">{streak >= 3 ? t('🔥 いい調子!') : t('毎日続けよう')}</div>
           </div>
           <div className="stat-tile">
-            <div className="label">レベル</div>
+            <div className="label">{t('レベル')}</div>
             <div className="value">Lv.{level}</div>
             <div className="level-bar" aria-label={`次のレベルまで ${needed - intoLevel} XP`}>
               <div className="fill" style={{ width: `${(intoLevel / needed) * 100}%` }} />
             </div>
             <div className="delta">
-              あと{needed - intoLevel}XP({Math.ceil((needed - intoLevel) / 10)}回)
+              {t('あと{n}XP({m}回)', { n: needed - intoLevel, m: Math.ceil((needed - intoLevel) / 10) })}
             </div>
           </div>
           <div className="stat-tile">
-            <div className="label">負荷トレンド</div>
+            <div className="label">{t('負荷トレンド')}</div>
             <div className="value" style={{ fontSize: 18 }}>
               <span className={`delta ${trend.cls}`} style={{ fontSize: 18 }}>
                 {trend.label}
@@ -225,22 +227,22 @@ export function StatsView() {
         </div>
 
         <div className="card chart-card">
-          <h3>週別の回数</h3>
-          <p className="subtitle">直近12週 × 週{habit.weeklyTarget}回の目標</p>
+          <h3>{t('週別の回数')}</h3>
+          <p className="subtitle">{t('直近12週 × 週{n}回の目標', { n: habit.weeklyTarget })}</p>
           <WeeklyBarChart weeks={weeks12} target={habit.weeklyTarget} color={color} />
         </div>
 
         {isStrength && (
           <div className="card chart-card">
-            <h3>種目別の成長</h3>
+            <h3>{t('種目別の成長')}</h3>
             <ExerciseProgress entries={habitEntries} color={color} />
           </div>
         )}
 
         {habit.metric !== 'none' && habit.lowerIsBetter && (
           <div className="card chart-card">
-            <h3>週のベストタイム({habit.unit})</h3>
-            <p className="subtitle">レベルが上がっているかは、この線が下がっているかで確認</p>
+            <h3>{t('週のベストタイム({u})', { u: habit.unit })}</h3>
+            <p className="subtitle">{t('レベルが上がっているかは、この線が下がっているかで確認')}</p>
             <TrendLineChart
               points={weeklyBestSeries(habitEntries, 12)}
               unit={habit.unit}
@@ -251,11 +253,11 @@ export function StatsView() {
 
         {habit.metric !== 'none' && !habit.lowerIsBetter && (
           <div className="card chart-card">
-            <h3>週別ボリューム({habit.unit})</h3>
+            <h3>{t('週別ボリューム({u})', { u: habit.unit })}</h3>
             <p className="subtitle">
               {isStrength
-                ? '週の総セット数。レベルが上がっているかは種目別の成長も確認'
-                : 'レベルが上がっているかは、この線の傾きで確認'}
+                ? t('週の総セット数。レベルが上がっているかは種目別の成長も確認')
+                : t('レベルが上がっているかは、この線の傾きで確認')}
             </p>
             <TrendLineChart
               points={weeks12.map((w) => ({ weekStart: w.weekStart, value: w.value }))}
@@ -266,22 +268,21 @@ export function StatsView() {
         )}
 
         <div className="card chart-card">
-          <h3>デイリーサマリー</h3>
+          <h3>{t('デイリーサマリー')}</h3>
           <p className="subtitle">
-            全習慣 × 日(直近4週)。濃さ = その日の量(各習慣の最大値比)。
-            睡眠や仕事と並べると、習慣の維持に何が効いているかが見えてくる
+{t('全習慣 × 日(直近4週)。濃さ = その日の量(各習慣の最大値比)。睡眠や仕事と並べると、習慣の維持に何が効いているかが見えてくる')}
           </p>
           <DailyMatrix
             rows={matrix.rows}
             days={matrix.days}
-            unitOf={(row) => (row.habit.metric === 'none' ? '回' : row.habit.unit || '')}
+            unitOf={(row) => (row.habit.metric === 'none' ? t('回') : row.habit.unit || '')}
           />
         </div>
 
         {insights.length > 0 && (
           <div className="card chart-card">
-            <h3>気づき</h3>
-            <p className="subtitle">直近8週の記録から。相関であって因果ではない点に注意(参考)</p>
+            <h3>{t('気づき')}</h3>
+            <p className="subtitle">{t('直近8週の記録から。相関であって因果ではない点に注意(参考)')}</p>
             <div className="insights">
               {insights.map((ins, i) => {
                 const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
@@ -289,8 +290,11 @@ export function StatsView() {
                 const more = ins.withAvg > ins.withoutAvg
                 return (
                   <div key={i} className="insight-row">
-                    💡 <b>{ins.aHabit.emoji} {ins.aHabit.name}</b>をやった日は、
-                    <b>{ins.bHabit.emoji} {ins.bHabit.name}</b>が{more ? '多い' : '少ない'}:{' '}
+                    💡{' '}
+                    {t(more ? '{a}をやった日は、{b}が多い:' : '{a}をやった日は、{b}が少ない:', {
+                      a: `${ins.aHabit.emoji} ${ins.aHabit.name}`,
+                      b: `${ins.bHabit.emoji} ${ins.bHabit.name}`,
+                    })}{' '}
                     <span className="insight-nums">
                       {fmt(ins.withAvg)}
                       {unit} <small>vs {fmt(ins.withoutAvg)}{unit}</small>
@@ -303,8 +307,8 @@ export function StatsView() {
         )}
 
         <div className="card chart-card">
-          <h3>記録カレンダー</h3>
-          <p className="subtitle">全習慣の記録(直近15週)</p>
+          <h3>{t('記録カレンダー')}</h3>
+          <p className="subtitle">{t('全習慣の記録(直近15週)')}</p>
           <CalendarHeatmap days={allDays} />
         </div>
       </main>

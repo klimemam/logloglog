@@ -9,6 +9,7 @@ import { getSyncConfig, handleAuthRedirect, syncNow } from './lib/sync'
 import { isNativeApp } from './lib/backend'
 import { initNativeAuthListener } from './lib/native-auth'
 import { applyUpdate, checkForUpdate, dismissUpdate, isDismissed } from './lib/update'
+import { t } from './lib/i18n'
 import type { UpdateResult } from './lib/update'
 
 /** 起動3秒後にバックグラウンドでアップデートを確認し、あればバナーを出す */
@@ -31,13 +32,13 @@ function UpdateBanner() {
   const versionLabel = info.latest?.startsWith('v') ? ` ${info.latest}` : ''
   return (
     <div className="update-banner" role="status">
-      <span className="update-banner-text">🆕 新しいバージョン{versionLabel}があります</span>
+      <span className="update-banner-text">{t('🆕 新しいバージョン{v}があります', { v: versionLabel })}</span>
       <button className="update-banner-action" onClick={applyUpdate}>
-        {isNativeApp() ? 'ダウンロード' : '更新'}
+        {isNativeApp() ? t('ダウンロード') : t('更新')}
       </button>
       <button
         className="update-banner-close"
-        aria-label="この通知を閉じる"
+        aria-label={t('この通知を閉じる')}
         onClick={() => {
           dismissUpdate(info.latest ?? '')
           setInfo(null)
@@ -65,35 +66,34 @@ function Onboarding() {
     setOpen(false)
   }
   return (
-    <Sheet open={open} title="ようこそ 👋" onClose={close}>
+    <Sheet open={open} title={t('ようこそ 👋')} onClose={close}>
       <div className="onboard">
         <div className="onboard-item">
           <span className="onboard-icon">✏️</span>
           <div>
-            <b>開いてすぐ、ワンタップで記録</b>
-            <p>ホームの「+」を押すだけ。ランニングや読書など、習慣は自由に追加できます。</p>
+            <b>{t('開いてすぐ、ワンタップで記録')}</b>
+            <p>{t('ホームの「+」を押すだけ。ランニングや読書など、習慣は自由に追加できます。')}</p>
           </div>
         </div>
         <div className="onboard-item">
           <span className="onboard-icon">💪</span>
           <div>
-            <b>筋トレはワークアウトモード</b>
-            <p>種目を選ぶと前回のセットが入った状態でスタート。✓するだけで休憩タイマーも動きます。</p>
+            <b>{t('筋トレはワークアウトモード')}</b>
+            <p>{t('種目を選ぶと前回のセットが入った状態でスタート。✓するだけで休憩タイマーも動きます。')}</p>
           </div>
         </div>
         <div className="onboard-item">
           <span className="onboard-icon">📈</span>
           <div>
-            <b>続けるほど、成長が見える</b>
-            <p>週の目標達成・連続記録・推定1RMの伸びを統計タブで確認できます。</p>
+            <b>{t('続けるほど、成長が見える')}</b>
+            <p>{t('週の目標達成・連続記録・推定1RMの伸びを統計タブで確認できます。')}</p>
           </div>
         </div>
         <p className="onboard-note">
-          データはあなたの端末の中だけに保存されます(登録不要・無料)。
-          ホーム画面に追加するとアプリとして使えます。
+{t('データはあなたの端末の中だけに保存されます(登録不要・無料)。ホーム画面に追加するとアプリとして使えます。')}
         </p>
         <button className="primary-btn" onClick={close}>
-          はじめる
+          {t('はじめる')}
         </button>
       </div>
     </Sheet>
@@ -158,10 +158,10 @@ const icons: Record<Tab, (active: boolean) => JSX.Element> = {
 }
 
 const tabs: { id: Tab; label: string }[] = [
-  { id: 'home', label: '記録' },
-  { id: 'stats', label: '統計' },
-  { id: 'habits', label: '習慣' },
-  { id: 'settings', label: '設定' },
+  { id: 'home', label: t('記録') },
+  { id: 'stats', label: t('統計') },
+  { id: 'habits', label: t('習慣') },
+  { id: 'settings', label: t('設定') },
 ]
 
 export default function App() {

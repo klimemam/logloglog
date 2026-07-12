@@ -1,4 +1,5 @@
 /** ローカルタイムゾーンでの日付ユーティリティ(週は月曜はじまり) */
+import { localeTag } from './i18n'
 
 export const toDateKey = (d: Date): string => {
   const y = d.getFullYear()
@@ -41,11 +42,12 @@ export const formatDateShort = (key: string): string => {
   return `${d.getMonth() + 1}/${d.getDate()}`
 }
 
-export const formatDateLong = (key: string): string => {
-  const d = fromDateKey(key)
-  const youbi = ['日', '月', '火', '水', '木', '金', '土'][d.getDay()]
-  return `${d.getMonth() + 1}月${d.getDate()}日(${youbi})`
-}
+export const formatDateLong = (key: string): string =>
+  new Intl.DateTimeFormat(localeTag(), {
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(fromDateKey(key))
 
 export const nowTime = (): string => {
   const d = new Date()

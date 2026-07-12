@@ -3,6 +3,7 @@ import type { Entry, Habit } from '../types'
 import { bodyweightExercises, exerciseCatalog, exerciseInfo } from '../lib/exercises'
 import { epley1RM, exerciseRecords, intensityZone, recentExercises } from '../lib/stats'
 import { Sheet } from './Sheet'
+import { t } from '../lib/i18n'
 
 /* ===== ワークアウトセッション(進行中の状態) ===== */
 
@@ -67,11 +68,10 @@ export const rowsFromLast = (last: Entry | undefined): SessionRow[] => {
 }
 
 const lastSummary = (e: Entry): string => {
-  if (e.setsDetail?.length) {
-    const first = e.setsDetail[0]
-    return `前回 ${first.weight != null ? `${first.weight}kg×` : ''}${first.reps} × ${e.setsDetail.length}セット`
-  }
-  return `前回 ${e.weight != null ? `${e.weight}kg×` : ''}${e.reps ?? '-'} × ${e.sets ?? '-'}セット`
+  const first = e.setsDetail?.length ? e.setsDetail[0] : { weight: e.weight, reps: e.reps ?? '-' }
+  const sets = e.setsDetail?.length ?? e.sets ?? '-'
+  const s = `${first.weight != null ? `${first.weight}kg×` : ''}${first.reps} × ${sets}`
+  return t('前回 {s}', { s })
 }
 
 /* ===== 種目ピッカー(下からスライド) ===== */
@@ -108,7 +108,7 @@ export function ExercisePicker({
     onClose()
   }
 
-  const match = (name: string) => !q || name.includes(q)
+  const match = (name: string) => !q || name.includes(q) || t(name).toLowerCase().includes(q.toLowerCase())
   const catalogNames = new Set(exerciseCatalog.flatMap((g) => g.exercises))
   const searching = q.trim().length > 0
 
@@ -122,9 +122,9 @@ export function ExercisePicker({
           {info.emoji}
         </span>
         <span className="picker-main">
-          <span className="picker-name">{name}</span>
+          <span className="picker-name">{t(name)}</span>
           <span className="picker-sub">
-            {info.group}
+            {t(info.group)}
             {last ? ` ・ ${lastSummary(last)}` : ''}
           </span>
         </span>
@@ -136,17 +136,17 @@ export function ExercisePicker({
   const groups = exerciseCatalog.filter((g) => (searching || !part ? true : g.group === part))
 
   return (
-    <Sheet open={open} title="種目を選ぶ" onClose={onClose}>
+    <Sheet open={open} title={t('種目を選ぶ')} onClose={onClose}>
       <div className="picker">
         <input
-          placeholder="検索 / 新しい種目名を入力"
+          placeholder={t('検索 / 新しい種目名を入力')}
           value={q}
           onChange={(e) => setQ(e.target.value)}
         />
         {!searching && (
           <div className="chip-row" style={{ marginBottom: 0 }}>
             <button className={`chip${part === '' ? ' active' : ''}`} onClick={() => setPart('')}>
-              すべて
+              {t('すべて')}
             </button>
             {exerciseCatalog.map((g) => (
               <button
@@ -154,7 +154,7 @@ export function ExercisePicker({
                 className={`chip${part === g.group ? ' active' : ''}`}
                 onClick={() => setPart(g.group)}
               >
-                {g.emoji} {g.group}
+                {g.emoji} {t(g.group)}
               </button>
             ))}
           </div>
@@ -163,13 +163,13 @@ export function ExercisePicker({
           <button className="picker-row picker-add" onClick={() => pick(q.trim())}>
             <span className="picker-tile">＋</span>
             <span className="picker-main">
-              <span className="picker-name">「{q.trim()}」を追加</span>
+              <span className="picker-name">{t('「{q}」を追加', { q: q.trim() })}</span>
             </span>
           </button>
         )}
         {!part && recent.filter(match).length > 0 && (
           <div className="picker-group">
-            <div className="picker-group-label">最近</div>
+            <div className="picker-group-label">{t('最近')}</div>
             {recent.filter(match).slice(0, 6).map((name) => (
               <Row key={name} name={name} />
             ))}
@@ -181,7 +181,7 @@ export function ExercisePicker({
           return (
             <div key={g.group} className="picker-group">
               <div className="picker-group-label">
-                {g.emoji} {g.group}
+                {g.emoji} {t(g.group)}
               </div>
               {names.map((name) => (
                 <Row key={name} name={name} />
@@ -288,22 +288,22 @@ export function WorkoutMode({
           ∨
         </button>
         <div className="workout-title">
-          <span>{habit.emoji} ワークアウト</span>
+          <span>{habit.emoji} {t('ワークアウト')}</span>
           <span className="workout-elapsed">{fmtElapsed(session.startedAt)}</span>
         </div>
         <button className="workout-finish" onClick={onFinish} disabled={doneSets === 0}>
-          完了
+          {t('完了')}
         </button>
       </header>
 
       {restRemain != null && (
         <div className={`rest-banner${restRemain === 0 ? ' done' : ''}`}>
           {restRemain === 0 ? (
-            '休憩おわり!次のセットへ 💪'
+            t('休憩おわり!次のセットへ 💪')
           ) : (
             <>
-              休憩中 {Math.floor(restRemain / 60)}:{String(restRemain % 60).padStart(2, '0')}
-              <button onClick={() => setRestRemain(null)}>スキップ</button>
+              {t('休憩中 {t}', { t: `${Math.floor(restRemain / 60)}:${String(restRemain % 60).padStart(2, '0')}` })}
+              <button onClick={() => setRestRemain(null)}>{t('スキップ')}</button>
             </>
           )}
         </div>
@@ -325,9 +325,9 @@ export function WorkoutMode({
                   >
                     {exerciseInfo(ex.name).emoji}
                   </span>
-                  <span className="exercise-name">{ex.name}</span>
+                  <span className="exercise-name">{t(ex.name)}</span>
                   {records.best1RM != null && (
-                    <span className="exercise-best">ベスト1RM {records.best1RM}kg</span>
+                    <span className="exercise-best">{t('ベスト1RM {n}kg', { n: records.best1RM })}</span>
                   )}
                 </div>
                 <button
@@ -336,14 +336,14 @@ export function WorkoutMode({
                     update((s) => ({ ...s, exercises: s.exercises.filter((_, i) => i !== ei) }))
                   }
                 >
-                  削除
+                  {t('削除')}
                 </button>
               </div>
               <div className="set-table">
                 <div className="set-row workout-set set-head">
-                  <span>セット</span>
-                  <span>重量(kg)</span>
-                  <span>回数</span>
+                  <span>{t('セット')}</span>
+                  <span>{t('重量(kg)')}</span>
+                  <span>{t('回数')}</span>
                   <span />
                 </div>
                 {ex.rows.map((r, ri) => {
@@ -380,7 +380,7 @@ export function WorkoutMode({
                       <input
                         type="number"
                         inputMode="decimal"
-                        placeholder={bodyweight ? '自重' : 'kg'}
+                        placeholder={bodyweight ? t('自重') : 'kg'}
                         value={r.weight}
                         onChange={(e) => setRow(ei, ri, { weight: e.target.value })}
                       />
@@ -428,7 +428,7 @@ export function WorkoutMode({
                     }))
                   }
                 >
-                  + セットを追加
+                  {t('+ セットを追加')}
                 </button>
               </div>
             </div>
@@ -436,11 +436,11 @@ export function WorkoutMode({
         })}
 
         <button className="primary-btn" onClick={() => setPickerOpen(true)}>
-          + 種目を追加
+          {t('+ 種目を追加')}
         </button>
 
         <div className="rest-config">
-          <span>休憩タイマー:</span>
+          <span>{t('休憩タイマー:')}</span>
           {[60, 90, 120].map((s) => (
             <button
               key={s}
@@ -453,7 +453,7 @@ export function WorkoutMode({
         </div>
 
         <button className="discard-btn" onClick={onDiscard}>
-          記録せずに破棄
+          {t('記録せずに破棄')}
         </button>
       </div>
 

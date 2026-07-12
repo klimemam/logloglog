@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { MatrixRow, WeekAgg } from '../lib/stats'
 import { formatDateShort } from '../lib/dates'
+import { t } from '../lib/i18n'
 
 /** チャート内ホバー/タップのツールチップ状態 */
 interface Tip {
@@ -95,7 +96,7 @@ export function WeeklyBarChart({
           const cx = PAD.left + band * (i + 0.5)
           const barH = Math.max(0, PAD.top + plotH - y(w.count))
           const r = Math.min(4, barW / 2, barH)
-          const label = `${formatDateShort(w.weekStart)}週: ${w.count}回`
+          const label = t('{d}週: {n}回', { d: formatDateShort(w.weekStart), n: w.count })
           return (
             <g key={w.weekStart}>
               {/* 当たり判定はバンド全体(マークより大きく) */}
@@ -237,8 +238,8 @@ export function TrendLineChart({
         {data.map((p, i) => {
           const label =
             p.value == null
-              ? `${formatDateShort(p.weekStart)}週: 記録なし`
-              : `${formatDateShort(p.weekStart)}週: ${fmt(p.value)}${unit}`
+              ? t('{d}週: 記録なし', { d: formatDateShort(p.weekStart) })
+              : t('{d}週: {v}', { d: formatDateShort(p.weekStart), v: `${fmt(p.value)}${unit}` })
           return (
             <g key={p.weekStart}>
               <rect
@@ -354,9 +355,10 @@ export function DailyMatrix({
               {`${row.habit.emoji} ${row.habit.name.slice(0, 5)}`}
             </text>
             {row.values.map((v, c) => {
-              const label = `${formatDateShort(days[c])} ${row.habit.name}: ${
-                v > 0 ? `${fmt(v)}${unitOf(row)}` : '記録なし'
-              }`
+              const label =
+                v > 0
+                  ? t('{d} {name}: {v}', { d: formatDateShort(days[c]), name: row.habit.name, v: `${fmt(v)}${unitOf(row)}` })
+                  : t('{d} {name}: 記録なし', { d: formatDateShort(days[c]), name: row.habit.name })
               return (
                 <rect
                   key={c}
@@ -438,7 +440,7 @@ export function CalendarHeatmap({ days }: { days: { date: string; count: number 
         )}
         {weeks.map((week, c) =>
           week.map((d, r) => {
-            const label = `${formatDateShort(d.date)}: ${d.count}回`
+            const label = `${formatDateShort(d.date)}: ${d.count}${t('回')}`
             return (
               <rect
                 key={d.date}
@@ -457,11 +459,11 @@ export function CalendarHeatmap({ days }: { days: { date: string; count: number 
         )}
       </svg>
       <div className="heatmap-legend">
-        <span>少</span>
+        <span>{t('少')}</span>
         {seq.map((s) => (
           <span key={s} className="cell" style={{ background: s }} />
         ))}
-        <span>多</span>
+        <span>{t('多')}</span>
       </div>
       {tip && (
         <div className="chart-tooltip" style={{ left: tip.x, top: tip.y }}>

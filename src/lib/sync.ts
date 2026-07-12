@@ -7,6 +7,7 @@
  */
 import type { AppData, Entry, Habit } from '../types'
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from './backend'
+import { t } from './i18n'
 
 /* ===== 設定 ===== */
 
@@ -135,8 +136,8 @@ const gistApi = (token: string, path: string, init?: RequestInit) =>
 
 const findOrCreateGist = async (token: string, data: AppData): Promise<string> => {
   const res = await gistApi(token, '/gists?per_page=100')
-  if (res.status === 401) throw new Error('トークンが無効です。作り直して貼り直してください')
-  if (!res.ok) throw new Error(`同期先の確認に失敗しました (${res.status})`)
+  if (res.status === 401) throw new Error(t('トークンが無効です。作り直して貼り直してください'))
+  if (!res.ok) throw new Error(t('同期先の確認に失敗しました ({s})', { s: res.status }))
   const gists = (await res.json()) as { id: string; description?: string; files?: Record<string, unknown> }[]
   const hit = gists.find((g) => g.description === GIST_DESC || (g.files && FILE in g.files))
   if (hit) return hit.id
@@ -150,7 +151,7 @@ const findOrCreateGist = async (token: string, data: AppData): Promise<string> =
     }),
   })
   if (!created.ok)
-    throw new Error(`同期先の作成に失敗しました (${created.status})。トークンに「gist」権限があるか確認してください`)
+    throw new Error(t('同期先の作成に失敗しました ({s})。トークンに「gist」権限があるか確認してください', { s: created.status }))
   return ((await created.json()) as { id: string }).id
 }
 
@@ -204,8 +205,8 @@ export const supabaseSignIn = async (
   const j = (await res.json()) as AuthResponse
   if (!res.ok) {
     const raw = j.msg ?? j.error_description ?? j.message ?? `エラー (${res.status})`
-    if (/already registered/i.test(raw)) throw new Error('このメールは登録済みです。「ログイン」を押してください')
-    if (/invalid login credentials/i.test(raw)) throw new Error('メールアドレスかパスワードが違います')
+    if (/already registered/i.test(raw)) throw new Error(t('このメールは登録済みです。「ログイン」を押してください'))
+    if (/invalid login credentials/i.test(raw)) throw new Error(t('メールアドレスかパスワードが違います'))
     throw new Error(raw)
   }
   return toSession(j)
@@ -234,7 +235,7 @@ export const applyAuthFragment = (fragment: string): boolean => {
 
   const errDesc = params.get('error_description')
   if (errDesc) {
-    setStatus({ state: 'error', message: `Googleログインに失敗しました: ${errDesc}` })
+    setStatus({ state: 'error', message: t('Googleログインに失敗しました: {e}', { e: errDesc }) })
     return false
   }
 
@@ -280,7 +281,7 @@ const ensureSession = async (cfg: Extract<SyncConfig, { provider: 'supabase' }>)
     body: JSON.stringify({ refresh_token: cfg.session.refresh_token }),
   })
   const j = (await res.json()) as AuthResponse
-  if (!res.ok) throw new Error('セッションの更新に失敗しました。同期を解除して再ログインしてください')
+  if (!res.ok) throw new Error(t('セッションの更新に失敗しました。同期を解除して再ログインしてください'))
   const session = toSession(j)
   setSyncConfig({ ...cfg, session })
   return session
@@ -291,7 +292,7 @@ const supabasePull = async (session: SupabaseSession): Promise<string | null> =>
     `${SUPABASE_URL}/rest/v1/user_data?select=data&user_id=eq.${session.user_id}`,
     { headers: sbHeaders(session.access_token) },
   )
-  if (!res.ok) throw new Error(`同期データの取得に失敗しました (${res.status})`)
+  if (!res.ok) throw new Error(t('同期データの取得に失敗しました ({s})', { s: res.status }))
   const rows = (await res.json()) as { data: AppData }[]
   return rows[0] ? JSON.stringify(rows[0].data) : null
 }
@@ -306,7 +307,7 @@ const supabasePush = async (session: SupabaseSession, body: string): Promise<voi
       updated_at: new Date().toISOString(),
     }),
   })
-  if (!res.ok) throw new Error(`同期データの保存に失敗しました (${res.status})`)
+  if (!res.ok) throw new Error(t('同期データの保存に失敗しました ({s})', { s: res.status }))
 }
 
 /* ===== 同期本体 ===== */
@@ -346,8 +347,8 @@ const doSync = async (data: AppData, apply: (d: AppData) => void): Promise<void>
           return gist.files?.[FILE]?.content ?? null
         }
         if (res.status === 404) return null // 手動削除された → pushで作り直される
-        if (res.status === 401) throw new Error('トークンが無効です。作り直して貼り直してください')
-        throw new Error(`同期データの取得に失敗しました (${res.status})`)
+        if (res.status === 401) throw new Error(t('トークンが無効です。作り直して貼り直してください'))
+        throw new Error(t('同期データの取得に失敗しました ({s})', { s: res.status }))
       }
       push = async (body) => {
         const w = await gistApi(cfg.token, `/gists/${id}`, {
@@ -360,7 +361,7 @@ const doSync = async (data: AppData, apply: (d: AppData) => void): Promise<void>
           setSyncConfig({ ...cfg, gistId: newId })
           return
         }
-        if (!w.ok) throw new Error(`同期データの保存に失敗しました (${w.status})`)
+        if (!w.ok) throw new Error(t('同期データの保存に失敗しました ({s})', { s: w.status }))
       }
     } else {
       const session = await ensureSession(cfg)
@@ -390,7 +391,7 @@ const doSync = async (data: AppData, apply: (d: AppData) => void): Promise<void>
     setStatus({
       state: 'error',
       lastSyncedAt: status.lastSyncedAt,
-      message: err instanceof Error ? err.message : '同期に失敗しました',
+      message: err instanceof Error ? err.message : t('同期に失敗しました'),
     })
   }
 }

@@ -8,6 +8,7 @@
 import { App } from '@capacitor/app'
 import { Browser } from '@capacitor/browser'
 import { isNativeApp } from './backend'
+import { t } from './i18n'
 
 export const APK_URL =
   'https://github.com/klimemam/logloglog/releases/download/android-latest/LogLogLog.apk'
@@ -23,7 +24,7 @@ export interface UpdateResult {
 
 const checkNative = async (): Promise<UpdateResult> => {
   let currentCode = 0
-  let current = '不明'
+  let current = t('不明')
   try {
     const info = await App.getInfo()
     currentCode = Number(info.build) || 0
@@ -32,7 +33,7 @@ const checkNative = async (): Promise<UpdateResult> => {
     // プラグインが使えない環境では0扱い(=常に最新を案内)
   }
   const res = await fetch(RELEASE_API)
-  if (!res.ok) throw new Error(`最新バージョンの確認に失敗しました (${res.status})`)
+  if (!res.ok) throw new Error(t('最新バージョンの確認に失敗しました ({s})', { s: res.status }))
   const rel = (await res.json()) as { name?: string }
   const m = (rel.name ?? '').match(/v(\d+\.\d+\.(\d+))/)
   if (!m) return { available: false, current }
@@ -46,7 +47,7 @@ const checkWeb = async (): Promise<UpdateResult> => {
   const currentName = currentSrc.split('/').pop() ?? ''
   // Service Workerのキャッシュを確実に迂回するためクエリを付ける(sw.js側で素通し)
   const res = await fetch(`./index.html?update-check=${Date.now()}`, { cache: 'no-store' })
-  if (!res.ok) throw new Error(`更新の確認に失敗しました (${res.status})`)
+  if (!res.ok) throw new Error(t('更新の確認に失敗しました ({s})', { s: res.status }))
   const html = await res.text()
   const m = html.match(/assets\/(index-[\w-]+\.js)/)
   const latestName = m?.[1] ?? ''

@@ -4,6 +4,7 @@ import type { Habit } from '../types'
 import { formatDateLong, todayKey } from '../lib/dates'
 import { aggregateByDay, currentStreak, thisWeekProgress } from '../lib/stats'
 import { Sheet } from './Sheet'
+import { t } from '../lib/i18n'
 import {
   ExercisePicker,
   WorkoutMode,
@@ -51,7 +52,7 @@ function HabitCard({
 
   const log = (v?: number, n?: string) => {
     dispatch({ type: 'addEntry', habitId: habit.id, value: v, note: n || undefined })
-    onLogged({ text: `${habit.name}を記録しました`, undoHabitId: habit.id })
+    onLogged({ text: t('{name}を記録しました', { name: habit.name }), undoHabitId: habit.id })
   }
 
   const wash = `color-mix(in srgb, ${seriesVar(habit.colorSlot)} 13%, transparent)`
@@ -68,7 +69,7 @@ function HabitCard({
             {habit.name}
           </div>
           <div className="habit-sub">
-            <span className="week-dots" aria-label={`今週 ${week.count}/${week.target}回`}>
+            <span className="week-dots" aria-label={t('今週 {n}/{m}回', { n: week.count, m: week.target })}>
               {Array.from({ length: Math.max(week.target, week.count) }, (_, i) => (
                 <span key={i} className={`dot${i < week.count ? ' filled' : ''}`} />
               ))}
@@ -76,15 +77,15 @@ function HabitCard({
                 {week.count}/{week.target}
               </span>
             </span>
-            {activeSession && <span className="in-workout">ワークアウト中</span>}
+            {activeSession && <span className="in-workout">{t('ワークアウト中')}</span>}
             {streak > 0 && (
-              <span className={`streak${streak >= 3 ? ' hot' : ''}`}>🔥 {streak}日連続</span>
+              <span className={`streak${streak >= 3 ? ' hot' : ''}`}>{t('🔥 {n}日連続', { n: streak })}</span>
             )}
             {todayEntries.length > 0 && (
               <span>
                 {isStrength
-                  ? `今日 ${todayExercises}種目 ${todayValue}セット`
-                  : `今日 ${todayEntries.length}回 ${metricLabel(habit, todayValue)}`}
+                  ? t('今日 {n}種目 {m}セット', { n: todayExercises, m: todayValue })
+                  : t('今日 {n}回 {v}', { n: todayEntries.length, v: metricLabel(habit, todayValue) })}
               </span>
             )}
           </div>
@@ -93,10 +94,10 @@ function HabitCard({
         {isStrength ? (
           <button
             className="log-pill"
-            aria-label={activeSession ? 'ワークアウトを再開する' : 'ワークアウトを開始する'}
+            aria-label={activeSession ? t('▶ 再開') : t('▶ 開始')}
             onClick={() => onStrengthTap(habit)}
           >
-            ▶ {activeSession ? '再開' : '開始'}
+            {activeSession ? t('▶ 再開') : t('▶ 開始')}
           </button>
         ) : habit.metric !== 'none' && habit.defaultValue != null ? (
           <button
@@ -120,21 +121,17 @@ function HabitCard({
       {!isStrength && (
         <>
           <button className="detail-toggle" onClick={() => setOpen(true)}>
-            詳しく記録する ▸
+            {t('詳しく記録する ▸')}
           </button>
           <Sheet
             open={open}
-            title={
-              <>
-                {habit.emoji} {habit.name}を記録
-              </>
-            }
+            title={`${habit.emoji} ${t('{name}を記録', { name: habit.name })}`}
             onClose={() => setOpen(false)}
           >
             <div className="form-grid">
               {habit.metric !== 'none' && (
                 <label>
-                  記録値({habit.unit})
+                  {t('記録値({unit})', { unit: habit.unit })}
                   <input
                     type="number"
                     inputMode="decimal"
@@ -145,10 +142,10 @@ function HabitCard({
                 </label>
               )}
               <label>
-                メモ(任意)
+                {t('メモ(任意)')}
                 <input
                   type="text"
-                  placeholder="例: 調子よかった"
+                  placeholder={t('例: 調子よかった')}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                 />
@@ -162,7 +159,7 @@ function HabitCard({
                   setOpen(false)
                 }}
               >
-                記録する
+                {t('記録する')}
               </button>
             </div>
           </Sheet>
@@ -250,11 +247,11 @@ export function HomeView() {
     }
     setSession(null)
     setWorkoutOpen(false)
-    setToast({ text: `ワークアウトを記録しました 💪(${exCount}種目 ${setCount}セット)` })
+    setToast({ text: t('ワークアウトを記録しました 💪({e}種目 {s}セット)', { e: exCount, s: setCount }) })
   }
 
   const discardWorkout = () => {
-    if (!confirm('このワークアウトを記録せずに破棄しますか?')) return
+    if (!confirm(t('このワークアウトを記録せずに破棄しますか?'))) return
     setSession(null)
     setWorkoutOpen(false)
   }
@@ -262,7 +259,7 @@ export function HomeView() {
   return (
     <>
       <header className="app-header">
-        <h1>今日の記録</h1>
+        <h1>{t('今日の記録')}</h1>
         <div className="date">{formatDateLong(todayKey())}</div>
       </header>
       <main className="app-main">
@@ -276,7 +273,7 @@ export function HomeView() {
           />
         ))}
         {habits.length === 0 && (
-          <p className="empty-note">習慣がありません。「習慣」タブから追加してください。</p>
+          <p className="empty-note">{t('習慣がありません。「習慣」タブから追加してください。')}</p>
         )}
       </main>
 
@@ -305,7 +302,7 @@ export function HomeView() {
       {toast && (
         <div className="toast" role="status">
           <span>{toast.text}</span>
-          {toast.undoHabitId && <button onClick={undo}>取り消す</button>}
+          {toast.undoHabitId && <button onClick={undo}>{t('取り消す')}</button>}
         </div>
       )}
     </>

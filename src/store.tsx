@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useReducer } from 'react
 import type { ReactNode } from 'react'
 import type { AppData, Entry, Habit } from './types'
 import { nowTime, todayKey } from './lib/dates'
+import { t } from './lib/i18n'
 
 const STORAGE_KEY = 'logloglog:v1'
 
@@ -12,18 +13,18 @@ const uid = (): string =>
 const defaultHabits = (): Habit[] => [
   {
     id: 'default-strength',
-    name: '筋トレ',
+    name: t('筋トレ'),
     emoji: '💪',
     colorSlot: 0,
     kind: 'strength',
     metric: 'reps',
-    unit: 'セット',
+    unit: t('セット'),
     weeklyTarget: 3,
     createdAt: new Date().toISOString(),
   },
   {
     id: 'default-running',
-    name: 'ランニング',
+    name: t('ランニング'),
     emoji: '🏃',
     colorSlot: 1,
     metric: 'distance',
