@@ -13,6 +13,70 @@ import {
 } from '../lib/sync'
 import { emailSyncAvailable, GOOGLE_LOGIN_ENABLED, isNativeApp } from '../lib/backend'
 import { startNativeGoogleLogin } from '../lib/native-auth'
+import { APK_URL, checkForUpdate } from '../lib/update'
+import type { UpdateResult } from '../lib/update'
+
+/** アプリ情報とアップデート確認(APK版は新バージョンのダウンロードへ誘導) */
+function AppInfoSection() {
+  const [result, setResult] = useState<UpdateResult | null>(null)
+  const [checking, setChecking] = useState(false)
+  const [error, setError] = useState('')
+
+  const check = async () => {
+    setChecking(true)
+    setError('')
+    try {
+      setResult(await checkForUpdate())
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '確認に失敗しました')
+    } finally {
+      setChecking(false)
+    }
+  }
+
+  // 設定を開いたときに自動チェック
+  useEffect(() => {
+    check()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  return (
+    <>
+      <h2 className="section-title">アプリ情報</h2>
+      <div className="card" style={{ display: 'grid', gap: 8 }}>
+        <div className="sync-status">
+          {checking && <span>🔄 アップデートを確認中…</span>}
+          {!checking && error && <span className="err">⚠️ {error}</span>}
+          {!checking && !error && result && (
+            <span className={result.available ? 'err' : 'ok'}>
+              {result.available
+                ? `🆕 新しいバージョン ${result.latest ?? ''} があります(現在 ${result.current})`
+                : `✅ 最新版です(${result.current})`}
+            </span>
+          )}
+        </div>
+        {result?.available &&
+          (isNativeApp() ? (
+            <a className="primary-btn" style={{ textAlign: 'center', textDecoration: 'none' }} href={APK_URL}>
+              新しいAPKをダウンロード
+            </a>
+          ) : (
+            <button className="primary-btn" onClick={() => location.reload()}>
+              更新して再読み込み
+            </button>
+          ))}
+        <button className="secondary-btn" onClick={check} disabled={checking}>
+          アップデートを確認
+        </button>
+        {isNativeApp() && (
+          <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+            ダウンロードしたAPKを開くと上書きインストールされます(記録はそのまま残ります)。
+          </p>
+        )}
+      </div>
+    </>
+  )
+}
 
 /** マルチデバイス同期の設定(Google/メール/GitHub Gist) */
 function SyncSection() {
@@ -416,6 +480,8 @@ export function SettingsView() {
             データはこの端末のブラウザ内(+設定した同期先)に保存されます。
           </p>
         </div>
+
+        <AppInfoSection />
       </main>
     </>
   )

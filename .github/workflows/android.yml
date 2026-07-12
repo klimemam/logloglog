@@ -41,7 +41,8 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: android-latest
-          name: LogLogLog Android版(最新ビルド)
+          # アプリ内のアップデート確認がこの名前からバージョンを読む(形式を変えないこと)
+          name: LogLogLog Android v1.0.${{ github.run_number }}
           body: |
             AndroidスマホでこのAPKをダウンロードしてインストールしてください。
             「提供元不明のアプリ」の許可を求められたら許可します(自己署名のため)。
