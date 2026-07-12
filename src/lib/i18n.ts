@@ -52,6 +52,24 @@ export const t = (key: string, params?: Record<string, string | number>): string
   return s
 }
 
+/** プリセット/デフォルト習慣の正規名(この集合だけ逆引き翻訳の対象にする) */
+const NAME_KEYS = ['筋トレ', 'ランニング', 'ウォーキング', '読書', '100マス計算', '勉強', '瞑想', 'ストレッチ', '睡眠', '仕事']
+let nameReverse: Map<string, string> | null = null
+
+/**
+ * 習慣名の表示用変換。プリセット由来の名前(どの言語で保存されていても)は
+ * 表示言語に翻訳し、ユーザーが自由入力した名前はそのまま返す。
+ */
+export const tName = (name: string): string => {
+  if (NAME_KEYS.includes(name)) return t(name)
+  if (!nameReverse) {
+    nameReverse = new Map()
+    for (const key of NAME_KEYS) for (const v of D[key] ?? []) nameReverse.set(v, key)
+  }
+  const canonical = nameReverse.get(name)
+  return canonical ? t(canonical) : name
+}
+
 const D: Record<string, [string, string, string, string]> = {
   /* ===== タブ・共通 ===== */
   '記録': ['Log', '记录', 'Registro', 'تسجيل'],

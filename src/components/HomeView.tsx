@@ -4,7 +4,7 @@ import type { Habit } from '../types'
 import { formatDateLong, todayKey } from '../lib/dates'
 import { aggregateByDay, currentStreak, thisWeekProgress } from '../lib/stats'
 import { Sheet } from './Sheet'
-import { t } from '../lib/i18n'
+import { t, tName } from '../lib/i18n'
 import {
   ExercisePicker,
   WorkoutMode,
@@ -52,7 +52,7 @@ function HabitCard({
 
   const log = (v?: number, n?: string) => {
     dispatch({ type: 'addEntry', habitId: habit.id, value: v, note: n || undefined })
-    onLogged({ text: t('{name}を記録しました', { name: habit.name }), undoHabitId: habit.id })
+    onLogged({ text: t('{name}を記録しました', { name: tName(habit.name) }), undoHabitId: habit.id })
   }
 
   const wash = `color-mix(in srgb, ${seriesVar(habit.colorSlot)} 13%, transparent)`
@@ -66,7 +66,7 @@ function HabitCard({
         <div className="habit-info">
           <div className="habit-name">
             <span className="color-dot" style={{ background: seriesVar(habit.colorSlot) }} />
-            {habit.name}
+            {tName(habit.name)}
           </div>
           <div className="habit-sub">
             <span className="week-dots" aria-label={t('今週 {n}/{m}回', { n: week.count, m: week.target })}>
@@ -125,7 +125,7 @@ function HabitCard({
           </button>
           <Sheet
             open={open}
-            title={`${habit.emoji} ${t('{name}を記録', { name: habit.name })}`}
+            title={`${habit.emoji} ${t('{name}を記録', { name: tName(habit.name) })}`}
             onClose={() => setOpen(false)}
           >
             <div className="form-grid">

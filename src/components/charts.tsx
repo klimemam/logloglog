@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { MatrixRow, WeekAgg } from '../lib/stats'
 import { formatDateShort } from '../lib/dates'
-import { t } from '../lib/i18n'
+import { t, tName } from '../lib/i18n'
 
 /** チャート内ホバー/タップのツールチップ状態 */
 interface Tip {
@@ -352,13 +352,13 @@ export function DailyMatrix({
               fontWeight={600}
               fill="var(--text-secondary)"
             >
-              {`${row.habit.emoji} ${row.habit.name.slice(0, 5)}`}
+              {`${row.habit.emoji} ${tName(row.habit.name).slice(0, 8)}`}
             </text>
             {row.values.map((v, c) => {
               const label =
                 v > 0
-                  ? t('{d} {name}: {v}', { d: formatDateShort(days[c]), name: row.habit.name, v: `${fmt(v)}${unitOf(row)}` })
-                  : t('{d} {name}: 記録なし', { d: formatDateShort(days[c]), name: row.habit.name })
+                  ? t('{d} {name}: {v}', { d: formatDateShort(days[c]), name: tName(row.habit.name), v: `${fmt(v)}${unitOf(row)}` })
+                  : t('{d} {name}: 記録なし', { d: formatDateShort(days[c]), name: tName(row.habit.name) })
               return (
                 <rect
                   key={c}

@@ -20,7 +20,7 @@ import {
 } from '../lib/stats'
 import { WeeklyBarChart, TrendLineChart, CalendarHeatmap, DailyMatrix } from './charts'
 import { seriesVar } from './HomeView'
-import { t } from '../lib/i18n'
+import { t, tName } from '../lib/i18n'
 
 const trendText = {
   up: { label: t('↑ レベルアップ中'), cls: 'up', desc: t('直近4週の負荷が前の4週より増えています') },
@@ -181,7 +181,7 @@ export function StatsView() {
               onClick={() => setSelectedId(h.id)}
             >
               <span className="color-dot" style={{ background: seriesVar(h.colorSlot) }} />
-              {h.emoji} {h.name}
+              {h.emoji} {tName(h.name)}
             </button>
           ))}
         </div>
@@ -292,8 +292,8 @@ export function StatsView() {
                   <div key={i} className="insight-row">
                     💡{' '}
                     {t(more ? '{a}をやった日は、{b}が多い:' : '{a}をやった日は、{b}が少ない:', {
-                      a: `${ins.aHabit.emoji} ${ins.aHabit.name}`,
-                      b: `${ins.bHabit.emoji} ${ins.bHabit.name}`,
+                      a: `${ins.aHabit.emoji} ${tName(ins.aHabit.name)}`,
+                      b: `${ins.bHabit.emoji} ${tName(ins.bHabit.name)}`,
                     })}{' '}
                     <span className="insight-nums">
                       {fmt(ins.withAvg)}

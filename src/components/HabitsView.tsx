@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useStore } from '../store'
 import type { Habit, MetricType } from '../types'
 import { seriesVar } from './HomeView'
-import { t } from '../lib/i18n'
+import { t, tName } from '../lib/i18n'
 
 /** フォーム上の「記録するもの」。strength は保存時に kind: 'strength' へ変換される */
 type FormMetric = MetricType | 'strength'
@@ -247,7 +247,7 @@ export function HabitsView() {
               <span className="color-dot" style={{ background: seriesVar(h.colorSlot) }} />
               <span>{h.emoji}</span>
               <div className="grow">
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{h.name}</div>
+                <div style={{ fontWeight: 600, fontSize: 14 }}>{tName(h.name)}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
                   {t('週{n}回', { n: h.weeklyTarget })}
                   {h.kind === 'strength'
@@ -262,7 +262,7 @@ export function HabitsView() {
               <button
                 className="text-btn danger"
                 onClick={() => {
-                  if (confirm(t('「{name}」と記録をすべて削除します。よろしいですか?', { name: h.name }))) {
+                  if (confirm(t('「{name}」と記録をすべて削除します。よろしいですか?', { name: tName(h.name) }))) {
                     dispatch({ type: 'deleteHabit', habitId: h.id })
                   }
                 }}
@@ -286,7 +286,7 @@ export function HabitsView() {
             return (
               <div key={e.id} className="entry-row">
                 <span>
-                  {h?.emoji} {h?.name ?? t('(削除済み)')}
+                  {h?.emoji} {h ? tName(h.name) : t('(削除済み)')}
                   {e.exercise
                     ? ` ${t(e.exercise)} ${e.weight != null ? `${e.weight}kg×` : ''}${e.reps ?? '-'}×${e.sets ?? '-'}`
                     : e.value != null && ` ${e.value}${h?.unit ?? ''}`}
