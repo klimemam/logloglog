@@ -4,6 +4,10 @@ import type { Habit } from '../types'
 import { formatDateLong, todayKey } from '../lib/dates'
 import { aggregateByDay, currentStreak, dailyHabitMatrix, thisWeekProgress } from '../lib/stats'
 import { Sheet } from './Sheet'
+import { Header } from './Header'
+import { DayDetailSheet } from './DayDetail'
+import { appConfirm } from './dialog'
+import { IconChevronRight, IconPlay } from './icons'
 import { DailyMatrix } from './charts'
 import { t, tName } from '../lib/i18n'
 import {
@@ -58,8 +62,13 @@ function HabitCard({
 
   const wash = `color-mix(in srgb, ${seriesVar(habit.colorSlot)} 13%, transparent)`
 
+  const mainAction = () =>
+    isStrength
+      ? onStrengthTap(habit)
+      : log(habit.metric === 'none' ? undefined : habit.defaultValue)
+
   return (
-    <div className="card">
+    <div className="card habit-tappable" onClick={mainAction}>
       <div className="habit-card">
         <div className="habit-emoji" style={{ background: wash }}>
           {habit.emoji}
@@ -95,16 +104,16 @@ function HabitCard({
         {isStrength ? (
           <button
             className="log-pill"
-            aria-label={activeSession ? t('▶ 再開') : t('▶ 開始')}
-            onClick={() => onStrengthTap(habit)}
+            aria-label={activeSession ? t('再開') : t('開始')}
+            onClick={(e) => { e.stopPropagation(); onStrengthTap(habit) }}
           >
-            {activeSession ? t('▶ 再開') : t('▶ 開始')}
+            <IconPlay /> {activeSession ? t('再開') : t('開始')}
           </button>
         ) : habit.metric !== 'none' && habit.defaultValue != null ? (
           <button
             className={`log-pill${todayEntries.length > 0 ? ' done' : ''}`}
             aria-label={`${habit.defaultValue}${habit.unit}を記録する`}
-            onClick={() => log(habit.defaultValue)}
+            onClick={(e) => { e.stopPropagation(); log(habit.defaultValue) }}
           >
             +{habit.defaultValue}
             {habit.unit}
@@ -113,16 +122,16 @@ function HabitCard({
           <button
             className={`log-btn${todayEntries.length > 0 ? ' done' : ''}`}
             aria-label={`${habit.name}を記録する`}
-            onClick={() => log(habit.metric === 'none' ? undefined : habit.defaultValue)}
+            onClick={(e) => { e.stopPropagation(); log(habit.metric === 'none' ? undefined : habit.defaultValue) }}
           >
             {todayEntries.length > 0 ? '✓' : '+'}
           </button>
         )}
       </div>
       {!isStrength && (
-        <>
-          <button className="detail-toggle" onClick={() => setOpen(true)}>
-            {t('詳しく記録する ▸')}
+        <span onClick={(e) => e.stopPropagation()}>
+          <button className="detail-toggle" onClick={(e) => { e.stopPropagation(); setOpen(true) }}>
+            {t('詳しく記録する')} <IconChevronRight size={12} />
           </button>
           <Sheet
             open={open}
@@ -164,18 +173,19 @@ function HabitCard({
               </button>
             </div>
           </Sheet>
-        </>
+        </span>
       )}
     </div>
   )
 }
 
-export function HomeView({ onOpenStats }: { onOpenStats?: () => void }) {
+export function HomeView({ onOpenStats, onOpenHabits }: { onOpenStats?: () => void; onOpenHabits?: () => void }) {
   const { data, dispatch } = useStore()
   const [toast, setToast] = useState<ToastState | null>(null)
   const [session, setSession] = useState<WorkoutSession | null>(loadSession)
   const [workoutOpen, setWorkoutOpen] = useState(false)
   const [pickerFor, setPickerFor] = useState<Habit | null>(null)
+  const [detailDay, setDetailDay] = useState<string | null>(null)
 
   useEffect(() => {
     saveSession(session)
@@ -252,18 +262,15 @@ export function HomeView({ onOpenStats }: { onOpenStats?: () => void }) {
     setToast({ text: t('ワークアウトを記録しました 💪({e}種目 {s}セット)', { e: exCount, s: setCount }) })
   }
 
-  const discardWorkout = () => {
-    if (!confirm(t('このワークアウトを記録せずに破棄しますか?'))) return
+  const discardWorkout = async () => {
+    if (!(await appConfirm(t('このワークアウトを記録せずに破棄しますか?'), { danger: true, confirmLabel: t('破棄') }))) return
     setSession(null)
     setWorkoutOpen(false)
   }
 
   return (
     <>
-      <header className="app-header">
-        <h1>{t('今日の記録')}</h1>
-        <div className="date">{formatDateLong(todayKey())}</div>
-      </header>
+      <Header title={t('今日の記録')} subtitle={formatDateLong(todayKey())} />
       <main className="app-main">
         {/* 動線の始点: まず全習慣の状況を俯瞰してから、下で記録する */}
         {habits.length > 0 && (
@@ -272,7 +279,7 @@ export function HomeView({ onOpenStats }: { onOpenStats?: () => void }) {
               <h3>{t('デイリーサマリー')}</h3>
               {onOpenStats && (
                 <button className="text-btn" onClick={onOpenStats}>
-                  {t('詳しく ▸')}
+                  {t('詳しく')} <IconChevronRight size={12} />
                 </button>
               )}
             </div>
@@ -280,6 +287,7 @@ export function HomeView({ onOpenStats }: { onOpenStats?: () => void }) {
               rows={matrix.rows}
               days={matrix.days}
               unitOf={(row) => (row.habit.metric === 'none' ? t('回') : row.habit.unit || '')}
+              onDayTap={setDetailDay}
             />
           </div>
         )}
@@ -293,7 +301,16 @@ export function HomeView({ onOpenStats }: { onOpenStats?: () => void }) {
           />
         ))}
         {habits.length === 0 && (
-          <p className="empty-note">{t('習慣がありません。「習慣」タブから追加してください。')}</p>
+          <div className="empty-state">
+            <span className="empty-emoji">🌱</span>
+            <b>{t('まだ習慣がありません')}</b>
+            <p>{t('最初の習慣を追加して、今日から記録を始めましょう')}</p>
+            {onOpenHabits && (
+              <button className="primary-btn" style={{ width: 'auto', padding: '12px 28px' }} onClick={onOpenHabits}>
+                {t('+ 習慣を追加')}
+              </button>
+            )}
+          </div>
         )}
       </main>
 
@@ -318,6 +335,8 @@ export function HomeView({ onOpenStats }: { onOpenStats?: () => void }) {
           onDiscard={discardWorkout}
         />
       )}
+
+      <DayDetailSheet date={detailDay} onClose={() => setDetailDay(null)} />
 
       {toast && (
         <div className="toast" role="status">

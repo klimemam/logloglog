@@ -21,6 +21,8 @@ import {
 import { WeeklyBarChart, TrendLineChart, CalendarHeatmap, DailyMatrix } from './charts'
 import { seriesVar } from './HomeView'
 import { t, tName } from '../lib/i18n'
+import { Header } from './Header'
+import { DayDetailSheet } from './DayDetail'
 
 const trendText = {
   up: { label: t('↑ レベルアップ中'), cls: 'up', desc: t('直近4週の負荷が前の4週より増えています') },
@@ -140,6 +142,8 @@ export function StatsView() {
   const { data } = useStore()
   const habits = data.habits.filter((h) => !h.archived)
   const [selectedId, setSelectedId] = useState<string | null>(habits[0]?.id ?? null)
+  const [range, setRange] = useState(12)
+  const [detailDay, setDetailDay] = useState<string | null>(null)
   const habit = habits.find((h) => h.id === selectedId) ?? habits[0]
 
   const habitEntries = useMemo(
@@ -159,7 +163,7 @@ export function StatsView() {
   const streak = currentStreak(aggregateByDay(habitEntries))
   const { level, intoLevel, needed } = levelFromXp(xpForEntries(habitEntries.length))
   const trend = (habit.lowerIsBetter ? trendTextTime : trendText)[loadTrend(data.entries, habit)]
-  const weeks12 = weeklySeries(habitEntries, 12)
+  const weeksN = weeklySeries(habitEntries, range)
   const allDays = dailySeries(data.entries, 15 * 7)
   const color = seriesVar(habit.colorSlot)
   const isStrength = habit.kind === 'strength'
@@ -168,10 +172,7 @@ export function StatsView() {
 
   return (
     <>
-      <header className="app-header">
-        <h1>{t('統計')}</h1>
-        <div className="date">{t('目標に対する習慣の維持と、レベルの推移')}</div>
-      </header>
+      <Header title={t('統計')} subtitle={t('目標に対する習慣の維持と、レベルの推移')} />
       <main className="app-main">
         <div className="chip-row">
           {habits.map((h) => (
@@ -186,6 +187,19 @@ export function StatsView() {
           ))}
         </div>
 
+        <div className="chip-row" style={{ paddingTop: 0 }}>
+          {([
+            [4, t('4週')],
+            [12, t('12週')],
+            [26, t('半年')],
+            [52, t('1年')],
+          ] as [number, string][]).map(([n, label]) => (
+            <button key={n} className={`chip${range === n ? ' active' : ''}`} onClick={() => setRange(n)}>
+              {label}
+            </button>
+          ))}
+        </div>
+
         <div className="tile-grid">
           <div className="stat-tile">
             <div className="label">{t('今週の達成')}</div>
@@ -195,6 +209,12 @@ export function StatsView() {
             </div>
             <div className={`delta${week.done ? ' up' : ''}`}>
               {week.done ? t('🎉 目標達成!') : t('あと{n}回', { n: week.target - week.count })}
+              {' ・ '}
+              {(() => {
+                const lastWeek = weeklySeries(habitEntries, 2)[0].count
+                const d = week.count - lastWeek
+                return `${d > 0 ? '↑' : d < 0 ? '↓' : '→'} ${t('先週 {n}回', { n: lastWeek })}`
+              })()}
             </div>
           </div>
           <div className="stat-tile">
@@ -228,8 +248,8 @@ export function StatsView() {
 
         <div className="card chart-card">
           <h3>{t('週別の回数')}</h3>
-          <p className="subtitle">{t('直近12週 × 週{n}回の目標', { n: habit.weeklyTarget })}</p>
-          <WeeklyBarChart weeks={weeks12} target={habit.weeklyTarget} color={color} />
+          <p className="subtitle">{t('直近{n}週 × 週{m}回の目標', { n: range, m: habit.weeklyTarget })}</p>
+          <WeeklyBarChart weeks={weeksN} target={habit.weeklyTarget} color={color} />
         </div>
 
         {isStrength && (
@@ -244,7 +264,7 @@ export function StatsView() {
             <h3>{t('週のベストタイム({u})', { u: habit.unit })}</h3>
             <p className="subtitle">{t('レベルが上がっているかは、この線が下がっているかで確認')}</p>
             <TrendLineChart
-              points={weeklyBestSeries(habitEntries, 12)}
+              points={weeklyBestSeries(habitEntries, range)}
               unit={habit.unit}
               color={color}
             />
@@ -260,7 +280,7 @@ export function StatsView() {
                 : t('レベルが上がっているかは、この線の傾きで確認')}
             </p>
             <TrendLineChart
-              points={weeks12.map((w) => ({ weekStart: w.weekStart, value: w.value }))}
+              points={weeksN.map((w) => ({ weekStart: w.weekStart, value: w.value }))}
               unit={habit.unit}
               color={color}
             />
@@ -276,6 +296,7 @@ export function StatsView() {
             rows={matrix.rows}
             days={matrix.days}
             unitOf={(row) => (row.habit.metric === 'none' ? t('回') : row.habit.unit || '')}
+            onDayTap={setDetailDay}
           />
         </div>
 
@@ -311,6 +332,8 @@ export function StatsView() {
           <p className="subtitle">{t('全習慣の記録(直近15週)')}</p>
           <CalendarHeatmap days={allDays} />
         </div>
+
+        <DayDetailSheet date={detailDay} onClose={() => setDetailDay(null)} />
       </main>
     </>
   )

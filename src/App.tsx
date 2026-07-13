@@ -5,6 +5,8 @@ import { StatsView } from './components/StatsView'
 import { HabitsView } from './components/HabitsView'
 import { SettingsView } from './components/SettingsView'
 import { Sheet } from './components/Sheet'
+import { DialogHost } from './components/dialog'
+import { IconX } from './components/icons'
 import { getSyncConfig, handleAuthRedirect, syncNow } from './lib/sync'
 import { isNativeApp } from './lib/backend'
 import { initNativeAuthListener } from './lib/native-auth'
@@ -44,7 +46,7 @@ function UpdateBanner() {
           setInfo(null)
         }}
       >
-        ✕
+        <IconX />
       </button>
     </div>
   )
@@ -183,7 +185,8 @@ export default function App() {
       <SyncManager />
       <Onboarding />
       <UpdateBanner />
-      {tab === 'home' && <HomeView onOpenStats={() => setTab('stats')} />}
+      <DialogHost />
+      {tab === 'home' && <HomeView onOpenStats={() => setTab('stats')} onOpenHabits={() => setTab('habits')} />}
       {tab === 'stats' && <StatsView />}
       {tab === 'habits' && <HabitsView />}
       {tab === 'settings' && <SettingsView />}

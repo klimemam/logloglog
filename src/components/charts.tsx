@@ -122,7 +122,7 @@ export function WeeklyBarChart({
                   pointerEvents="none"
                 />
               )}
-              {(i === weeks.length - 1 || i % 4 === 0) && (
+              {(i === weeks.length - 1 || i % Math.max(4, Math.round(weeks.length / 5)) === 0) && (
                 <text
                   x={cx}
                   y={H - 8}
@@ -252,7 +252,7 @@ export function TrendLineChart({
                 onPointerDown={(e) => show(e, label)}
                 onPointerLeave={hide}
               />
-              {(i === data.length - 1 || i % 4 === 0) && (
+              {(i === data.length - 1 || i % Math.max(4, Math.round(data.length / 5)) === 0) && (
                 <text
                   x={px(i)}
                   y={H - 8}
@@ -312,10 +312,13 @@ export function DailyMatrix({
   rows,
   days,
   unitOf,
+  onDayTap,
 }: {
   rows: MatrixRow[]
   days: string[]
   unitOf: (row: MatrixRow) => string
+  /** セルタップでその日の詳細を開く(モバイル向け) */
+  onDayTap?: (date: string) => void
 }) {
   const { tip, wrapRef, show, hide } = useTooltip()
   // 初期表示は最新の日(右端)に合わせる
@@ -367,8 +370,8 @@ export function DailyMatrix({
                     rx={3}
                     fill={colorFor(v, row.max)}
                     onPointerMove={(e) => show(e, label)}
-                    onPointerDown={(e) => show(e, label)}
                     onPointerLeave={hide}
+                    onClick={() => onDayTap?.(days[c])}
                   />
                 )
               })}

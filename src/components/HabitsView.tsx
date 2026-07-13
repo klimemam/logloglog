@@ -3,6 +3,8 @@ import { useStore } from '../store'
 import type { Habit, MetricType } from '../types'
 import { seriesVar } from './HomeView'
 import { t, tName } from '../lib/i18n'
+import { Header } from './Header'
+import { appConfirm } from './dialog'
 
 /** フォーム上の「記録するもの」。strength は保存時に kind: 'strength' へ変換される */
 type FormMetric = MetricType | 'strength'
@@ -160,7 +162,8 @@ function HabitForm({
 
 export function HabitsView() {
   const { data, dispatch } = useStore()
-  const [editing, setEditing] = useState<Habit | 'new' | null>(null)
+  // 習慣がひとつもない状態で開いたら、そのまま追加フォームから始める
+  const [editing, setEditing] = useState<Habit | 'new' | null>(data.habits.length === 0 ? 'new' : null)
   // プリセット選択でフォームを作り直すためのシード(keyで再マウント)
   const [seed, setSeed] = useState<Form>(emptyForm)
   const [seedId, setSeedId] = useState(0)
@@ -200,10 +203,7 @@ export function HabitsView() {
 
   return (
     <>
-      <header className="app-header">
-        <h1>{t('習慣の管理')}</h1>
-        <div className="date">{t('習慣と目標の追加・編集')}</div>
-      </header>
+      <Header title={t('習慣の管理')} subtitle={t('習慣と目標の追加・編集')} />
       <main className="app-main">
         {editing === 'new' && (
           <div className="card">
@@ -261,8 +261,8 @@ export function HabitsView() {
               </button>
               <button
                 className="text-btn danger"
-                onClick={() => {
-                  if (confirm(t('「{name}」と記録をすべて削除します。よろしいですか?', { name: tName(h.name) }))) {
+                onClick={async () => {
+                  if (await appConfirm(t('「{name}」と記録をすべて削除します。よろしいですか?', { name: tName(h.name) }), { danger: true, confirmLabel: t('削除') })) {
                     dispatch({ type: 'deleteHabit', habitId: h.id })
                   }
                 }}

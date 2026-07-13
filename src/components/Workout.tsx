@@ -4,6 +4,7 @@ import { bodyweightExercises, exerciseCatalog, exerciseInfo } from '../lib/exerc
 import { epley1RM, exerciseRecords, intensityZone, recentExercises } from '../lib/stats'
 import { Sheet } from './Sheet'
 import { t } from '../lib/i18n'
+import { IconChevronDown } from './icons'
 
 /* ===== ワークアウトセッション(進行中の状態) ===== */
 
@@ -285,7 +286,7 @@ export function WorkoutMode({
     <div className="workout">
       <header className="workout-header">
         <button className="workout-minimize" aria-label="ホームに戻る(セッションは保持)" onClick={onMinimize}>
-          ∨
+          <IconChevronDown />
         </button>
         <div className="workout-title">
           <span>{habit.emoji} {t('ワークアウト')}</span>
@@ -298,6 +299,10 @@ export function WorkoutMode({
 
       {restRemain != null && (
         <div className={`rest-banner${restRemain === 0 ? ' done' : ''}`}>
+          <div
+            className="rest-progress"
+            style={{ width: `${Math.max(0, (restRemain / restDuration) * 100)}%` }}
+          />
           {restRemain === 0 ? (
             t('休憩おわり!次のセットへ 💪')
           ) : (
