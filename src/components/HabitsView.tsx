@@ -6,8 +6,8 @@ import { t, tName } from '../lib/i18n'
 import { Header } from './Header'
 import { appConfirm } from './dialog'
 
-/** フォーム上の「記録するもの」。strength は保存時に kind: 'strength' へ変換される */
-type FormMetric = MetricType | 'strength'
+/** フォーム上の「記録するもの」。strength / quit は保存時に kind へ変換される */
+type FormMetric = MetricType | 'strength' | 'quit'
 
 const metricOptions: { value: FormMetric; label: string; defaultUnit: string }[] = [
   { value: 'none', label: t('やった/やらない だけ'), defaultUnit: '' },
@@ -15,6 +15,7 @@ const metricOptions: { value: FormMetric; label: string; defaultUnit: string }[]
   { value: 'distance', label: t('距離(km)'), defaultUnit: 'km' },
   { value: 'reps', label: t('量(回・ページなど自由な単位)'), defaultUnit: t('回') },
   { value: 'strength', label: t('筋トレ(種目×セット×回数×重量)'), defaultUnit: t('セット') },
+  { value: 'quit', label: t('やめる習慣(禁煙・禁酒など。やってしまった日だけ記録)'), defaultUnit: '' },
 ]
 
 const emptyForm = {
@@ -40,6 +41,9 @@ const presets: (Partial<Form> & { name: string; emoji: string })[] = [
   { name: t('勉強'), emoji: '📖', metric: 'duration', unit: t('分'), defaultValue: '30', colorSlot: 5, weeklyTarget: 5 },
   { name: t('瞑想'), emoji: '🧘', metric: 'duration', unit: t('分'), defaultValue: '10', colorSlot: 6, weeklyTarget: 7 },
   { name: t('ストレッチ'), emoji: '🤸', metric: 'none', colorSlot: 7, weeklyTarget: 7 },
+  // やめる習慣: やってしまった日だけ記録し、継続日数を伸ばしていく
+  { name: t('禁煙'), emoji: '🚭', metric: 'quit', colorSlot: 6, weeklyTarget: 7 },
+  { name: t('禁酒'), emoji: '🍺', metric: 'quit', colorSlot: 2, weeklyTarget: 7 },
   // 生活ログ: 統計の「デイリーサマリー」「気づき」で習慣との関係を見るための記録
   { name: t('睡眠'), emoji: '😴', metric: 'duration', unit: t('時間'), defaultValue: '7', colorSlot: 5, weeklyTarget: 7 },
   { name: t('仕事'), emoji: '💼', metric: 'duration', unit: t('時間'), defaultValue: '8', colorSlot: 3, weeklyTarget: 5 },
@@ -91,7 +95,12 @@ function HabitForm({
             ))}
           </select>
         </label>
-        {form.metric !== 'none' && form.metric !== 'strength' && (
+        {form.metric === 'quit' && (
+          <p className="quit-note">
+            {t('やめる習慣は、何もしなくても継続日数が自動で伸びていきます。やってしまった日だけここで記録してください。')}
+          </p>
+        )}
+        {form.metric !== 'none' && form.metric !== 'strength' && form.metric !== 'quit' && (
           <div className="form-row">
             <label>
               {t('単位(km・分・ページ・問 など)')}
@@ -108,7 +117,7 @@ function HabitForm({
             </label>
           </div>
         )}
-        {form.metric !== 'none' && form.metric !== 'strength' && (
+        {form.metric !== 'none' && form.metric !== 'strength' && form.metric !== 'quit' && (
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, flexDirection: 'row' }}>
             <input
               type="checkbox"
@@ -119,17 +128,19 @@ function HabitForm({
             {t('値が小さいほど良い(100マス計算のタイムなど)')}
           </label>
         )}
-        <label>
-          {t('週の目標回数')}
-          <input
-            type="number"
-            inputMode="numeric"
-            min={1}
-            max={14}
-            value={form.weeklyTarget}
-            onChange={(e) => set('weeklyTarget', Math.max(1, Number(e.target.value) || 1))}
-          />
-        </label>
+        {form.metric !== 'quit' && (
+          <label>
+            {t('週の目標回数')}
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={14}
+              value={form.weeklyTarget}
+              onChange={(e) => set('weeklyTarget', Math.max(1, Number(e.target.value) || 1))}
+            />
+          </label>
+        )}
         <label>
           {t('色')}
           <div className="color-picker">
@@ -170,17 +181,19 @@ export function HabitsView() {
 
   const save = (f: Form) => {
     const isStrength = f.metric === 'strength'
+    const isQuit = f.metric === 'quit'
     const base = {
       name: f.name.trim(),
       emoji: f.emoji || '⭐',
       colorSlot: f.colorSlot,
-      kind: (isStrength ? 'strength' : 'simple') as Habit['kind'],
-      metric: (isStrength ? 'reps' : f.metric) as MetricType,
-      unit: isStrength ? t('セット') : f.metric === 'none' ? '' : f.unit,
-      weeklyTarget: f.weeklyTarget,
+      kind: (isStrength ? 'strength' : isQuit ? 'quit' : 'simple') as Habit['kind'],
+      metric: (isStrength ? 'reps' : isQuit ? 'none' : f.metric) as MetricType,
+      unit: isStrength ? t('セット') : isQuit || f.metric === 'none' ? '' : f.unit,
+      weeklyTarget: isQuit ? 7 : f.weeklyTarget,
       defaultValue:
-        isStrength || f.metric === 'none' ? undefined : Number(f.defaultValue) || undefined,
-      lowerIsBetter: !isStrength && f.metric !== 'none' && f.lowerIsBetter ? true : undefined,
+        isStrength || isQuit || f.metric === 'none' ? undefined : Number(f.defaultValue) || undefined,
+      lowerIsBetter:
+        !isStrength && !isQuit && f.metric !== 'none' && f.lowerIsBetter ? true : undefined,
     }
     if (editing === 'new') {
       dispatch({ type: 'addHabit', habit: base })
@@ -229,7 +242,12 @@ export function HabitsView() {
                     name: editing.name,
                     emoji: editing.emoji,
                     colorSlot: editing.colorSlot,
-                    metric: editing.kind === 'strength' ? 'strength' : editing.metric,
+                    metric:
+                      editing.kind === 'strength'
+                        ? 'strength'
+                        : editing.kind === 'quit'
+                          ? 'quit'
+                          : editing.metric,
                     unit: editing.unit,
                     weeklyTarget: editing.weeklyTarget,
                     defaultValue: editing.defaultValue?.toString() ?? '',
@@ -249,10 +267,13 @@ export function HabitsView() {
               <div className="grow">
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{tName(h.name)}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                  {t('週{n}回', { n: h.weeklyTarget })}
+                  {h.kind === 'quit'
+                    ? t('やめる習慣 ・ やってしまった日だけ記録')
+                    : t('週{n}回', { n: h.weeklyTarget })}
                   {h.kind === 'strength'
                     ? t('・ 種目×セット×回数×重量を記録')
-                    : h.metric !== 'none' &&
+                    : h.kind !== 'quit' &&
+                      h.metric !== 'none' &&
                       `${t('・ {u}を記録', { u: h.unit })}${h.lowerIsBetter ? t('(小さいほど良い)') : ''}`}
                 </div>
               </div>

@@ -1,7 +1,11 @@
 export type MetricType = 'none' | 'distance' | 'duration' | 'reps'
 
-/** simple = 値を1つ記録する習慣 / strength = 種目×セット×回数×重量で記録する筋トレ */
-export type HabitKind = 'simple' | 'strength'
+/**
+ * simple = 値を1つ記録する習慣 / strength = 種目×セット×回数×重量で記録する筋トレ /
+ * quit = やめる習慣(禁煙など)。記録するのは「やってしまった日」だけで、
+ * 何も記録しなければ継続日数が自動で伸びる
+ */
+export type HabitKind = 'simple' | 'strength' | 'quit'
 
 export interface Habit {
   id: string

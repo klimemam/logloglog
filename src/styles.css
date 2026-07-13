@@ -1547,14 +1547,16 @@ textarea.transfer-code:focus {
   vertical-align: -0.15em;
 }
 
-/* ⑧ カード全面タップ */
+/* ⑧ カード全面タップ。
+   注意: :activeにtransform/filterを使うと、カード内に描画される
+   position:fixedのシートオーバーレイの包含ブロックが変わって壊れるため、背景色で押下を表す */
 .card.habit-tappable {
   cursor: pointer;
-  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  transition: background 0.12s ease;
 }
 
 .card.habit-tappable:active {
-  transform: scale(0.985);
+  background: color-mix(in srgb, var(--surface-1) 94%, var(--text-primary));
 }
 
 /* ⑩ 習慣ゼロのときの空状態 */
@@ -1687,4 +1689,29 @@ textarea.transfer-code:focus {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* ===== やめる習慣(禁煙など) ===== */
+
+/* 「やってしまった」ピル: 通常の+と違い、押したくならない控えめな警告調 */
+.log-pill.slip {
+  background: transparent;
+  color: var(--series-6);
+  border: 1.5px solid var(--series-6);
+  box-shadow: none;
+  font-size: 13px;
+}
+
+.habit-sub .slip-note {
+  color: var(--series-6);
+  font-weight: 600;
+}
+
+.quit-note {
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  background: var(--input-bg);
+  border-radius: 12px;
+  padding: 10px 12px;
 }

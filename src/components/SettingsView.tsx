@@ -3,6 +3,7 @@ import qrcode from 'qrcode-generator'
 import { useStore } from '../store'
 import type { AppData } from '../types'
 import {
+  getSyncBackup,
   getSyncConfig,
   getSyncStatus,
   mergeData,
@@ -456,6 +457,28 @@ function DataBody() {
           e.target.value = ''
         }}
       />
+      {getSyncBackup() && (
+        <button
+          className="secondary-btn"
+          onClick={async () => {
+            const backup = getSyncBackup()
+            if (!backup) return
+            if (
+              await appConfirm(
+                t('同期接続時({at})に自動保存されたバックアップを今のデータに統合します(上書きではなく足し合わせ)。よろしいですか?', {
+                  at: backup.at.slice(0, 16).replace('T', ' '),
+                }),
+                { confirmLabel: t('復元') },
+              )
+            ) {
+              dispatch({ type: 'import', data: mergeData(data, backup.data) })
+              appAlert(t('バックアップを統合しました'))
+            }
+          }}
+        >
+          {t('ログイン前のデータを復元')}
+        </button>
+      )}
       <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
         {t('データはこの端末のブラウザ内(+設定した同期先)に保存されます。')}
       </p>

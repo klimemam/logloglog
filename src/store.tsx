@@ -113,6 +113,12 @@ const reducer = (state: AppData, action: Action): AppData => {
         habits: state.habits.filter((h) => h.id !== action.habitId),
         entries: state.entries.filter((e) => e.habitId !== action.habitId),
         deletedHabitIds: [...(state.deletedHabitIds ?? []), action.habitId].slice(-1000),
+        // 記録もトゥームストーン化する。これがないと他端末に残る同じ記録が
+        // 「生きている記録」と見なされ、マージ時に習慣が復活してしまう
+        deletedEntryIds: [
+          ...(state.deletedEntryIds ?? []),
+          ...state.entries.filter((e) => e.habitId === action.habitId).map((e) => e.id),
+        ].slice(-5000),
       }
     case 'import':
       return action.data

@@ -53,7 +53,7 @@ export const t = (key: string, params?: Record<string, string | number>): string
 }
 
 /** プリセット/デフォルト習慣の正規名(この集合だけ逆引き翻訳の対象にする) */
-const NAME_KEYS = ['筋トレ', 'ランニング', 'ウォーキング', '読書', '100マス計算', '勉強', '瞑想', 'ストレッチ', '睡眠', '仕事']
+const NAME_KEYS = ['筋トレ', 'ランニング', 'ウォーキング', '読書', '100マス計算', '勉強', '瞑想', 'ストレッチ', '睡眠', '仕事', '禁煙', '禁酒']
 let nameReverse: Map<string, string> | null = null
 
 /**
@@ -366,6 +366,31 @@ const D: Record<string, [string, string, string, string]> = {
   '最初の習慣を追加して、今日から記録を始めましょう': ['Add your first habit and start logging today', '添加第一个习惯,今天就开始记录吧', 'Añade tu primer hábito y empieza hoy', 'أضف عادتك الأولى وابدأ التسجيل اليوم'],
   'QRコード(別の端末のカメラで読み取り)': ['QR code (scan with your other device)', '二维码(用另一台设备扫描)', 'Código QR (escanéalo con el otro dispositivo)', 'رمز QR (امسحه بجهازك الآخر)'],
   'データが大きいためQRコードは使えません。コードをコピーしてください': ['Data too large for a QR code — copy the code instead', '数据过大,无法生成二维码,请复制代码', 'Datos demasiado grandes para QR: copia el código', 'البيانات كبيرة جدًا لرمز QR — انسخ الرمز'],
+  '同期接続時({at})に自動保存されたバックアップを今のデータに統合します(上書きではなく足し合わせ)。よろしいですか?': ['Merge the backup auto-saved when sync was connected ({at}) into your current data (added, not overwritten). Continue?', '将连接同步时({at})自动保存的备份合并到当前数据(合并而非覆盖)。继续吗?', 'Se combinará la copia guardada al conectar la sincronización ({at}) con tus datos actuales (se añade, no se sobrescribe). ¿Continuar?', 'سيتم دمج النسخة الاحتياطية المحفوظة عند ربط المزامنة ({at}) مع بياناتك الحالية (إضافة وليس استبدالًا). متابعة؟'],
+  '復元': ['Restore', '恢复', 'Restaurar', 'استعادة'],
+  'ログイン前のデータを復元': ['Restore pre-login data', '恢复登录前的数据', 'Restaurar datos previos al inicio de sesión', 'استعادة بيانات ما قبل تسجيل الدخول'],
+  'バックアップを統合しました': ['Backup merged', '已合并备份', 'Copia de seguridad combinada', 'تم دمج النسخة الاحتياطية'],
+  '禁煙': ['Quit smoking', '戒烟', 'Dejar de fumar', 'الإقلاع عن التدخين'],
+  '禁酒': ['Quit drinking', '戒酒', 'Dejar de beber', 'الإقلاع عن الشرب'],
+  'やめる習慣(禁煙・禁酒など。やってしまった日だけ記録)': ['Quitting habit (smoking, drinking… log only slip-ups)', '戒除类习惯(戒烟、戒酒等,只记录破戒的日子)', 'Hábito a dejar (fumar, beber… registra solo las recaídas)', 'عادة للإقلاع (تدخين، شرب… سجّل أيام الزلل فقط)'],
+  'やってしまった': ['I slipped', '破戒了', 'Recaí', 'زللت'],
+  '「{name}」を今日やってしまった記録をつけますか?継続{n}日はリセットされます': ['Log a slip-up for "{name}" today? Your {n}-day streak will reset', '要记录今天「{name}」破戒吗?连续{n}天将被重置', '¿Registrar una recaída de "{name}" hoy? Tu racha de {n} días se reiniciará', 'هل تسجّل زللًا في "{name}" اليوم؟ سيُعاد ضبط سلسلة {n} يومًا'],
+  '🔥 {n}日継続中': ['🔥 {n}-day streak', '🔥 已坚持{n}天', '🔥 racha de {n} días', '🔥 مستمر منذ {n} يومًا'],
+  '今日やってしまった: {n}回': ['Slipped today: {n}×', '今天破戒:{n}次', 'Recaídas hoy: {n}', 'زلل اليوم: {n} مرة'],
+  'やめる習慣は、何もしなくても継続日数が自動で伸びていきます。やってしまった日だけここで記録してください。': ['With a quitting habit, your streak grows automatically — log only the days you slip up.', '戒除类习惯什么都不用做,坚持天数会自动增长。只在破戒的那天记录即可。', 'En un hábito a dejar, la racha crece sola: registra solo los días de recaída.', 'في عادة الإقلاع تنمو السلسلة تلقائيًا — سجّل فقط أيام الزلل.'],
+  'やってしまったを記録': ['Log slip-up', '记录破戒', 'Registrar recaída', 'تسجيل الزلل'],
+  '例: 飲み会でつい1本': ['e.g. one at a party', '例:聚会时没忍住', 'p. ej., una en la fiesta', 'مثال: واحدة في حفلة'],
+  'やめる習慣 ・ やってしまった日だけ記録': ['Quitting habit — log only slip-ups', '戒除类习惯・只记录破戒日', 'Hábito a dejar: registra solo recaídas', 'عادة إقلاع — سجّل الزلل فقط'],
+  '継続日数': ['Current streak', '坚持天数', 'Racha actual', 'أيام الاستمرار'],
+  '今日から積み上げよう': ['Build it up from today', '从今天开始积累吧', 'Empieza a sumar desde hoy', 'ابدأ التراكم من اليوم'],
+  'ベスト継続': ['Best streak', '最佳纪录', 'Mejor racha', 'أفضل سلسلة'],
+  '🎉 記録更新中!': ['🎉 New record!', '🎉 正在刷新纪录!', '🎉 ¡Récord en curso!', '🎉 رقم قياسي جديد!'],
+  '記録更新を目指そう': ['Aim for a new record', '向新纪录冲刺吧', 'Ve a por un nuevo récord', 'اسعَ لرقم قياسي جديد'],
+  '今週のスリップ': ['Slips this week', '本周破戒', 'Recaídas esta semana', 'زلل هذا الأسبوع'],
+  'あと{n}XP({m}日)': ['{n} XP to go ({m} days)', '还差{n}XP({m}天)', 'Faltan {n} XP ({m} días)', 'باقٍ {n} نقطة ({m} يومًا)'],
+  '週別のスリップ回数': ['Slips per week', '每周破戒次数', 'Recaídas por semana', 'الزلل أسبوعيًا'],
+  'やってしまった回数。少ないほど良い(直近{n}週)': ['Slip-ups per week — fewer is better (last {n} weeks)', '破戒次数,越少越好(近{n}周)', 'Recaídas por semana: menos es mejor (últimas {n} semanas)', 'مرات الزلل — الأقل أفضل (آخر {n} أسبوعًا)'],
+  'クリア': ['Clean', '坚持住了', 'Limpio', 'نظيف'],
   '分': ['min', '分钟', 'min', 'د'],
   '時間': ['h', '小时', 'h', 'س'],
   'ページ': ['pg', '页', 'pág', 'صفحة'],

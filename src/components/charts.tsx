@@ -331,8 +331,9 @@ export function DailyMatrix({
   const width = days.length * (cell + gap)
   const height = rows.length * (cell + gap) + 16
   const seq = ['var(--seq-0)', 'var(--seq-1)', 'var(--seq-2)', 'var(--seq-3)', 'var(--seq-4)']
+  // 負の値 = やめる習慣の「やってしまった日」。赤で目立たせる
   const colorFor = (v: number, max: number) =>
-    v <= 0 ? seq[0] : seq[Math.min(4, Math.max(1, Math.ceil((v / max) * 4)))]
+    v < 0 ? 'var(--series-6)' : v === 0 ? seq[0] : seq[Math.min(4, Math.max(1, Math.ceil((v / max) * 4)))]
   const fmt = (v: number) => (Number.isInteger(v) ? String(v) : v.toFixed(1))
 
   return (
@@ -356,10 +357,17 @@ export function DailyMatrix({
           {rows.map((row, r) => (
             <g key={row.habit.id}>
               {row.values.map((v, c) => {
+                const isQuit = row.habit.kind === 'quit'
                 const label =
                   v > 0
-                    ? t('{d} {name}: {v}', { d: formatDateShort(days[c]), name: tName(row.habit.name), v: `${fmt(v)}${unitOf(row)}` })
-                    : t('{d} {name}: 記録なし', { d: formatDateShort(days[c]), name: tName(row.habit.name) })
+                    ? t('{d} {name}: {v}', {
+                        d: formatDateShort(days[c]),
+                        name: tName(row.habit.name),
+                        v: isQuit ? t('クリア') : `${fmt(v)}${unitOf(row)}`,
+                      })
+                    : v < 0
+                      ? t('{d} {name}: {v}', { d: formatDateShort(days[c]), name: tName(row.habit.name), v: t('やってしまった') })
+                      : t('{d} {name}: 記録なし', { d: formatDateShort(days[c]), name: tName(row.habit.name) })
                 return (
                   <rect
                     key={c}

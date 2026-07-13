@@ -50,9 +50,17 @@ export const weeklySeries = (entries: Entry[], n: number): WeekAgg[] => {
   return weeks.map((w) => map.get(w)!)
 }
 
-/** 今週の目標達成状況 */
+/** 今週の目標達成状況。やめる習慣は「今週クリアした日数 / 7」 */
 export const thisWeekProgress = (entries: Entry[], habit: Habit) => {
   const start = weekStartKey(todayKey())
+  if (habit.kind === 'quit') {
+    const slips = new Set(entries.filter((e) => e.habitId === habit.id).map((e) => e.date))
+    const created = habit.createdAt.slice(0, 10)
+    const from = created > start ? created : start
+    let count = 0
+    for (let d = from; d <= todayKey(); d = addDays(d, 1)) if (!slips.has(d)) count += 1
+    return { count, value: count, target: 7, done: count >= 7 }
+  }
   let count = 0
   let value = 0
   for (const e of entries) {
@@ -62,6 +70,35 @@ export const thisWeekProgress = (entries: Entry[], habit: Habit) => {
     }
   }
   return { count, value, target: habit.weeklyTarget, done: count >= habit.weeklyTarget }
+}
+
+/* ===== やめる習慣(禁煙など)。エントリ = やってしまった日(スリップ) ===== */
+
+export interface QuitStats {
+  /** いまの継続日数(今日を含む。今日やってしまったら0) */
+  current: number
+  /** ベスト継続日数 */
+  best: number
+  /** 開始からのクリア日数の合計(XP計算用) */
+  cleanDays: number
+}
+
+export const quitStats = (habit: Habit, entries: Entry[]): QuitStats => {
+  const slips = new Set(entries.map((e) => e.date))
+  const today = todayKey()
+  let current = 0
+  let best = 0
+  let cleanDays = 0
+  for (let d = habit.createdAt.slice(0, 10); d <= today; d = addDays(d, 1)) {
+    if (slips.has(d)) {
+      current = 0
+    } else {
+      current += 1
+      cleanDays += 1
+      if (current > best) best = current
+    }
+  }
+  return { current, best, cleanDays }
 }
 
 /**
@@ -247,7 +284,17 @@ export const dailyHabitMatrix = (
     days.push(d)
     d = addDays(d, 1)
   }
+  const today = todayKey()
   const rows = habits.map((h) => {
+    // やめる習慣は反転: クリアした日 = 1(良い)、やってしまった日 = -1(赤で表示)
+    if (h.kind === 'quit') {
+      const slips = new Set(entries.filter((e) => e.habitId === h.id).map((e) => e.date))
+      const created = h.createdAt.slice(0, 10)
+      const values = days.map((day) =>
+        day < created || day > today ? 0 : slips.has(day) ? -1 : 1,
+      )
+      return { habit: h, values, max: 1 }
+    }
     const byDay = new Map<string, number>()
     for (const e of entries) {
       if (e.habitId !== h.id) continue

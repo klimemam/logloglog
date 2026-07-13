@@ -12,6 +12,7 @@ import {
   intensityZone,
   levelFromXp,
   loadTrend,
+  quitStats,
   recentExercises,
   thisWeekProgress,
   weeklyBestSeries,
@@ -159,14 +160,17 @@ export function StatsView() {
     )
   }
 
+  const isStrength = habit.kind === 'strength'
+  const isQuit = habit.kind === 'quit'
   const week = thisWeekProgress(data.entries, habit)
-  const streak = currentStreak(aggregateByDay(habitEntries))
-  const { level, intoLevel, needed } = levelFromXp(xpForEntries(habitEntries.length))
+  // やめる習慣: 継続はスリップ記録からの逆算、XPは「クリアした日数」で貯まる
+  const qs = isQuit ? quitStats(habit, habitEntries) : null
+  const streak = qs ? qs.current : currentStreak(aggregateByDay(habitEntries))
+  const { level, intoLevel, needed } = levelFromXp(xpForEntries(qs ? qs.cleanDays : habitEntries.length))
   const trend = (habit.lowerIsBetter ? trendTextTime : trendText)[loadTrend(data.entries, habit)]
   const weeksN = weeklySeries(habitEntries, range)
   const allDays = dailySeries(data.entries, 15 * 7)
   const color = seriesVar(habit.colorSlot)
-  const isStrength = habit.kind === 'strength'
   const matrix = dailyHabitMatrix(habits, data.entries, 28)
   const insights = habitInsights(habits, data.entries, 56)
 
@@ -201,30 +205,56 @@ export function StatsView() {
         </div>
 
         <div className="tile-grid">
-          <div className="stat-tile">
-            <div className="label">{t('今週の達成')}</div>
-            <div className="value">
-              {week.count}
-              <small>{t(' / {n}回', { n: week.target })}</small>
+          {qs ? (
+            <div className="stat-tile">
+              <div className="label">{t('継続日数')}</div>
+              <div className="value">
+                {qs.current}
+                <small> {t('日')}</small>
+              </div>
+              <div className={`delta${qs.current >= 3 ? ' up' : ''}`}>
+                {qs.current >= 3 ? t('🔥 いい調子!') : t('今日から積み上げよう')}
+              </div>
             </div>
-            <div className={`delta${week.done ? ' up' : ''}`}>
-              {week.done ? t('🎉 目標達成!') : t('あと{n}回', { n: week.target - week.count })}
-              {' ・ '}
-              {(() => {
-                const lastWeek = weeklySeries(habitEntries, 2)[0].count
-                const d = week.count - lastWeek
-                return `${d > 0 ? '↑' : d < 0 ? '↓' : '→'} ${t('先週 {n}回', { n: lastWeek })}`
-              })()}
+          ) : (
+            <div className="stat-tile">
+              <div className="label">{t('今週の達成')}</div>
+              <div className="value">
+                {week.count}
+                <small>{t(' / {n}回', { n: week.target })}</small>
+              </div>
+              <div className={`delta${week.done ? ' up' : ''}`}>
+                {week.done ? t('🎉 目標達成!') : t('あと{n}回', { n: week.target - week.count })}
+                {' ・ '}
+                {(() => {
+                  const lastWeek = weeklySeries(habitEntries, 2)[0].count
+                  const d = week.count - lastWeek
+                  return `${d > 0 ? '↑' : d < 0 ? '↓' : '→'} ${t('先週 {n}回', { n: lastWeek })}`
+                })()}
+              </div>
             </div>
-          </div>
-          <div className="stat-tile">
-            <div className="label">{t('連続記録')}</div>
-            <div className="value">
-              {streak}
-              <small> {t('日')}</small>
+          )}
+          {qs ? (
+            <div className="stat-tile">
+              <div className="label">{t('ベスト継続')}</div>
+              <div className="value">
+                {qs.best}
+                <small> {t('日')}</small>
+              </div>
+              <div className={`delta${qs.best > 0 && qs.current === qs.best ? ' up' : ''}`}>
+                {qs.best > 0 && qs.current === qs.best ? t('🎉 記録更新中!') : t('記録更新を目指そう')}
+              </div>
             </div>
-            <div className="delta">{streak >= 3 ? t('🔥 いい調子!') : t('毎日続けよう')}</div>
-          </div>
+          ) : (
+            <div className="stat-tile">
+              <div className="label">{t('連続記録')}</div>
+              <div className="value">
+                {streak}
+                <small> {t('日')}</small>
+              </div>
+              <div className="delta">{streak >= 3 ? t('🔥 いい調子!') : t('毎日続けよう')}</div>
+            </div>
+          )}
           <div className="stat-tile">
             <div className="label">{t('レベル')}</div>
             <div className="value">Lv.{level}</div>
@@ -232,24 +262,47 @@ export function StatsView() {
               <div className="fill" style={{ width: `${(intoLevel / needed) * 100}%` }} />
             </div>
             <div className="delta">
-              {t('あと{n}XP({m}回)', { n: needed - intoLevel, m: Math.ceil((needed - intoLevel) / 10) })}
+              {qs
+                ? t('あと{n}XP({m}日)', { n: needed - intoLevel, m: Math.ceil((needed - intoLevel) / 10) })
+                : t('あと{n}XP({m}回)', { n: needed - intoLevel, m: Math.ceil((needed - intoLevel) / 10) })}
             </div>
           </div>
-          <div className="stat-tile">
-            <div className="label">{t('負荷トレンド')}</div>
-            <div className="value" style={{ fontSize: 18 }}>
-              <span className={`delta ${trend.cls}`} style={{ fontSize: 18 }}>
-                {trend.label}
-              </span>
+          {qs ? (
+            <div className="stat-tile">
+              <div className="label">{t('今週のスリップ')}</div>
+              <div className="value">
+                {weeklySeries(habitEntries, 1)[0].count}
+                <small> {t('回')}</small>
+              </div>
+              <div className="delta">
+                {(() => {
+                  const thisW = weeklySeries(habitEntries, 1)[0].count
+                  const lastW = weeklySeries(habitEntries, 2)[0].count
+                  return `${thisW < lastW ? '↓' : thisW > lastW ? '↑' : '→'} ${t('先週 {n}回', { n: lastW })}`
+                })()}
+              </div>
             </div>
-            <div className="delta">{trend.desc}</div>
-          </div>
+          ) : (
+            <div className="stat-tile">
+              <div className="label">{t('負荷トレンド')}</div>
+              <div className="value" style={{ fontSize: 18 }}>
+                <span className={`delta ${trend.cls}`} style={{ fontSize: 18 }}>
+                  {trend.label}
+                </span>
+              </div>
+              <div className="delta">{trend.desc}</div>
+            </div>
+          )}
         </div>
 
         <div className="card chart-card">
-          <h3>{t('週別の回数')}</h3>
-          <p className="subtitle">{t('直近{n}週 × 週{m}回の目標', { n: range, m: habit.weeklyTarget })}</p>
-          <WeeklyBarChart weeks={weeksN} target={habit.weeklyTarget} color={color} />
+          <h3>{qs ? t('週別のスリップ回数') : t('週別の回数')}</h3>
+          <p className="subtitle">
+            {qs
+              ? t('やってしまった回数。少ないほど良い(直近{n}週)', { n: range })
+              : t('直近{n}週 × 週{m}回の目標', { n: range, m: habit.weeklyTarget })}
+          </p>
+          <WeeklyBarChart weeks={weeksN} target={qs ? 0 : habit.weeklyTarget} color={qs ? 'var(--series-6)' : color} />
         </div>
 
         {isStrength && (

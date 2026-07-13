@@ -54,9 +54,39 @@ export const getSyncConfig = (): SyncConfig | null => {
 }
 
 export const setSyncConfig = (cfg: SyncConfig | null) => {
+  // 同期をつなぐ瞬間のローカルデータを自動バックアップしておく。
+  // 初回マージで想定外にデータが変わっても、設定の「データ」から復元できる
+  if (cfg && !getSyncConfig()) {
+    try {
+      const raw = localStorage.getItem('logloglog:v1')
+      if (raw) {
+        localStorage.setItem(
+          BACKUP_KEY,
+          JSON.stringify({ at: new Date().toISOString(), data: JSON.parse(raw) }),
+        )
+      }
+    } catch {
+      // 容量不足などでバックアップできなくても接続自体は続行する
+    }
+  }
   if (cfg) localStorage.setItem(CFG_KEY, JSON.stringify(cfg))
   else localStorage.removeItem(CFG_KEY)
   setStatus(cfg ? { state: 'idle', lastSyncedAt: status.lastSyncedAt } : { state: 'off' })
+}
+
+const BACKUP_KEY = 'logloglog:backup:v1'
+
+/** 同期接続時に自動保存されたローカルデータのバックアップ(なければnull) */
+export const getSyncBackup = (): { at: string; data: AppData } | null => {
+  try {
+    const raw = localStorage.getItem(BACKUP_KEY)
+    if (!raw) return null
+    const b = JSON.parse(raw) as { at: string; data: AppData }
+    if (b?.data?.version === 1 && Array.isArray(b.data.habits)) return b
+  } catch {
+    // 壊れたバックアップは無いものとして扱う
+  }
+  return null
 }
 
 /* ===== 状態のpub/sub(設定UIが購読する) ===== */
@@ -90,7 +120,9 @@ if (typeof localStorage !== 'undefined' && getSyncConfig()) status = { state: 'i
 
 export const mergeData = (a: AppData, b: AppData): AppData => {
   const deletedEntryIds = [...new Set([...(a.deletedEntryIds ?? []), ...(b.deletedEntryIds ?? [])])]
-  const deletedHabitIds = [...new Set([...(a.deletedHabitIds ?? []), ...(b.deletedHabitIds ?? [])])]
+  const rawDeletedHabitIds = [
+    ...new Set([...(a.deletedHabitIds ?? []), ...(b.deletedHabitIds ?? [])]),
+  ]
 
   const ts = (h: Habit) => h.updatedAt ?? h.createdAt
   const habitMap = new Map<string, Habit>()
@@ -98,14 +130,25 @@ export const mergeData = (a: AppData, b: AppData): AppData => {
     const cur = habitMap.get(h.id)
     if (!cur || ts(h) > ts(cur)) habitMap.set(h.id, h)
   }
-  const habits = [...habitMap.values()].filter((h) => !deletedHabitIds.includes(h.id))
-  const habitIds = new Set(habits.map((h) => h.id))
 
   const entryMap = new Map<string, Entry>()
   for (const e of [...a.entries, ...b.entries]) if (!entryMap.has(e.id)) entryMap.set(e.id, e)
   const deleted = new Set(deletedEntryIds)
-  const entries = [...entryMap.values()]
-    .filter((e) => !deleted.has(e.id) && habitIds.has(e.habitId))
+  const liveEntries = [...entryMap.values()].filter((e) => !deleted.has(e.id))
+
+  // 削除トゥームストーンがあっても、消されていない「生きた記録」が残っている習慣は復活させる。
+  // デフォルト習慣は全端末で同じ固定IDのため、別端末での過去の削除が
+  // この端末で新しくつけた記録を巻き添えで消す事故を防ぐ(記録の保全を削除の伝播より優先)。
+  // 意図した習慣の削除は、deleteHabitが記録もトゥームストーン化するので正しく伝播する。
+  const liveHabitIds = new Set(liveEntries.map((e) => e.habitId))
+  const deletedHabitIds = rawDeletedHabitIds.filter(
+    (id) => !(liveHabitIds.has(id) && habitMap.has(id)),
+  )
+
+  const habits = [...habitMap.values()].filter((h) => !deletedHabitIds.includes(h.id))
+  const habitIds = new Set(habits.map((h) => h.id))
+  const entries = liveEntries
+    .filter((e) => habitIds.has(e.habitId))
     .sort((x, y) => (x.createdAt < y.createdAt ? -1 : 1))
 
   return { version: 1, habits, entries, deletedEntryIds, deletedHabitIds }

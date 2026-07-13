@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useStore } from '../store'
 import type { Habit } from '../types'
 import { formatDateLong, todayKey } from '../lib/dates'
-import { aggregateByDay, currentStreak, dailyHabitMatrix, thisWeekProgress } from '../lib/stats'
+import { aggregateByDay, currentStreak, dailyHabitMatrix, quitStats, thisWeekProgress } from '../lib/stats'
 import { Sheet } from './Sheet'
 import { Header } from './Header'
 import { DayDetailSheet } from './DayDetail'
@@ -50,9 +50,11 @@ function HabitCard({
   const today = todayKey()
   const todayEntries = entries.filter((e) => e.date === today)
   const todayValue = todayEntries.reduce((s, e) => s + (e.value ?? 0), 0)
-  const streak = currentStreak(aggregateByDay(entries))
-  const week = thisWeekProgress(data.entries, habit)
   const isStrength = habit.kind === 'strength'
+  const isQuit = habit.kind === 'quit'
+  // やめる習慣: 記録がないこと自体が成果なので、継続日数はスリップ記録から逆算する
+  const streak = isQuit ? quitStats(habit, entries).current : currentStreak(aggregateByDay(entries))
+  const week = thisWeekProgress(data.entries, habit)
   const todayExercises = new Set(todayEntries.map((e) => e.exercise).filter(Boolean)).size
 
   const log = (v?: number, n?: string) => {
@@ -60,12 +62,31 @@ function HabitCard({
     onLogged({ text: t('{name}を記録しました', { name: tName(habit.name) }), undoHabitId: habit.id })
   }
 
+  const logSlip = async (n?: string) => {
+    if (
+      await appConfirm(
+        t('「{name}」を今日やってしまった記録をつけますか?継続{n}日はリセットされます', {
+          name: tName(habit.name),
+          n: streak,
+        }),
+        { danger: true, confirmLabel: t('記録する') },
+      )
+    ) {
+      log(undefined, n)
+      return true
+    }
+    return false
+  }
+
   const wash = `color-mix(in srgb, ${seriesVar(habit.colorSlot)} 13%, transparent)`
 
+  // カード全面タップ: やめる習慣は誤タップでスリップが付くと致命的なので、詳細シートを開くだけにする
   const mainAction = () =>
     isStrength
       ? onStrengthTap(habit)
-      : log(habit.metric === 'none' ? undefined : habit.defaultValue)
+      : isQuit
+        ? setOpen(true)
+        : log(habit.metric === 'none' ? undefined : habit.defaultValue)
 
   return (
     <div className="card habit-tappable" onClick={mainAction}>
@@ -79,8 +100,9 @@ function HabitCard({
             {tName(habit.name)}
           </div>
           <div className="habit-sub">
+            {/* 目標が多くてもドットが溢れないよう表示は7個まで(数字は正確に出す) */}
             <span className="week-dots" aria-label={t('今週 {n}/{m}回', { n: week.count, m: week.target })}>
-              {Array.from({ length: Math.max(week.target, week.count) }, (_, i) => (
+              {Array.from({ length: Math.min(7, Math.max(week.target, week.count)) }, (_, i) => (
                 <span key={i} className={`dot${i < week.count ? ' filled' : ''}`} />
               ))}
               <span style={{ marginLeft: 4 }}>
@@ -89,9 +111,14 @@ function HabitCard({
             </span>
             {activeSession && <span className="in-workout">{t('ワークアウト中')}</span>}
             {streak > 0 && (
-              <span className={`streak${streak >= 3 ? ' hot' : ''}`}>{t('🔥 {n}日連続', { n: streak })}</span>
+              <span className={`streak${streak >= 3 ? ' hot' : ''}`}>
+                {isQuit ? t('🔥 {n}日継続中', { n: streak }) : t('🔥 {n}日連続', { n: streak })}
+              </span>
             )}
-            {todayEntries.length > 0 && (
+            {isQuit && todayEntries.length > 0 && (
+              <span className="slip-note">{t('今日やってしまった: {n}回', { n: todayEntries.length })}</span>
+            )}
+            {!isQuit && todayEntries.length > 0 && (
               <span>
                 {isStrength
                   ? t('今日 {n}種目 {m}セット', { n: todayExercises, m: todayValue })
@@ -100,8 +127,19 @@ function HabitCard({
             )}
           </div>
         </div>
-        {/* ボタン自体が「押すと何が起きるか」を語る: ▶開始 / +5km / +✓ */}
-        {isStrength ? (
+        {/* ボタン自体が「押すと何が起きるか」を語る: ▶開始 / +5km / +✓ / やってしまった */}
+        {isQuit ? (
+          <button
+            className="log-pill slip"
+            aria-label={t('やってしまった')}
+            onClick={(e) => {
+              e.stopPropagation()
+              void logSlip()
+            }}
+          >
+            {t('やってしまった')}
+          </button>
+        ) : isStrength ? (
           <button
             className="log-pill"
             aria-label={activeSession ? t('再開') : t('開始')}
@@ -139,7 +177,13 @@ function HabitCard({
             onClose={() => setOpen(false)}
           >
             <div className="form-grid">
-              {habit.metric !== 'none' && (
+              {isQuit && (
+                <p className="quit-note">
+                  {t('やめる習慣は、何もしなくても継続日数が自動で伸びていきます。やってしまった日だけここで記録してください。')}
+                  {streak > 0 && <b> {t('🔥 {n}日継続中', { n: streak })}</b>}
+                </p>
+              )}
+              {habit.metric !== 'none' && !isQuit && (
                 <label>
                   {t('記録値({unit})', { unit: habit.unit })}
                   <input
@@ -155,21 +199,28 @@ function HabitCard({
                 {t('メモ(任意)')}
                 <input
                   type="text"
-                  placeholder={t('例: 調子よかった')}
+                  placeholder={isQuit ? t('例: 飲み会でつい1本') : t('例: 調子よかった')}
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                 />
               </label>
               <button
-                className="primary-btn"
-                onClick={() => {
+                className={`primary-btn${isQuit ? ' dialog-danger' : ''}`}
+                onClick={async () => {
+                  if (isQuit) {
+                    if (await logSlip(note)) {
+                      setNote('')
+                      setOpen(false)
+                    }
+                    return
+                  }
                   const v = habit.metric === 'none' ? undefined : Number(value) || undefined
                   log(v, note)
                   setNote('')
                   setOpen(false)
                 }}
               >
-                {t('記録する')}
+                {isQuit ? t('やってしまったを記録') : t('記録する')}
               </button>
             </div>
           </Sheet>
