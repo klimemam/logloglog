@@ -5,7 +5,7 @@ import { epley1RM, exerciseRecords, intensityZone, recentExercises } from '../li
 import { Sheet } from './Sheet'
 import { t } from '../lib/i18n'
 import { IconChevronDown } from './icons'
-import { ExerciseIcon, ExerciseTile } from './exercise-icons'
+import { ExerciseTile } from './exercise-icons'
 
 /* ===== ワークアウトセッション(進行中の状態) ===== */
 
@@ -153,7 +153,7 @@ export function ExercisePicker({
                 className={`chip${part === g.group ? ' active' : ''}`}
                 onClick={() => setPart(g.group)}
               >
-                <ExerciseIcon name={g.group} size={15} /> {t(g.group)}
+                {t(g.group)}
               </button>
             ))}
           </div>
@@ -179,9 +179,7 @@ export function ExercisePicker({
           if (!names.length) return null
           return (
             <div key={g.group} className="picker-group">
-              <div className="picker-group-label">
-                <ExerciseIcon name={g.group} size={14} /> {t(g.group)}
-              </div>
+              <div className="picker-group-label">{t(g.group)}</div>
               {names.map((name) => (
                 <Row key={name} name={name} />
               ))}

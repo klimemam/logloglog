@@ -1725,3 +1725,11 @@ textarea.transfer-code:focus {
 .picker-group-label svg {
   vertical-align: -0.18em;
 }
+
+/* ダークモードでは濃い部位カラー(体幹の緑など)のコントラストが不足するため、
+   ピクトグラムの線色だけ明るく持ち上げる */
+@media (prefers-color-scheme: dark) {
+  .picker-tile.exercise-pict svg {
+    color: color-mix(in srgb, currentColor 70%, #fff);
+  }
+}
