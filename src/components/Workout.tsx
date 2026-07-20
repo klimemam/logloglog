@@ -5,6 +5,7 @@ import { epley1RM, exerciseRecords, intensityZone, recentExercises } from '../li
 import { Sheet } from './Sheet'
 import { t } from '../lib/i18n'
 import { IconChevronDown } from './icons'
+import { ExerciseIcon, ExerciseTile } from './exercise-icons'
 
 /* ===== ワークアウトセッション(進行中の状態) ===== */
 
@@ -116,12 +117,9 @@ export function ExercisePicker({
   const Row = ({ name }: { name: string }) => {
     const last = lastByExercise.get(name)
     const info = exerciseInfo(name)
-    const wash = `color-mix(in srgb, var(--series-${(info.colorSlot % 8) + 1}) 15%, transparent)`
     return (
       <button className="picker-row" onClick={() => pick(name)}>
-        <span className="picker-tile" style={{ background: wash }}>
-          {info.emoji}
-        </span>
+        <ExerciseTile name={name} />
         <span className="picker-main">
           <span className="picker-name">{t(name)}</span>
           <span className="picker-sub">
@@ -155,7 +153,7 @@ export function ExercisePicker({
                 className={`chip${part === g.group ? ' active' : ''}`}
                 onClick={() => setPart(g.group)}
               >
-                {g.emoji} {t(g.group)}
+                <ExerciseIcon name={g.group} size={15} /> {t(g.group)}
               </button>
             ))}
           </div>
@@ -182,7 +180,7 @@ export function ExercisePicker({
           return (
             <div key={g.group} className="picker-group">
               <div className="picker-group-label">
-                {g.emoji} {t(g.group)}
+                <ExerciseIcon name={g.group} size={14} /> {t(g.group)}
               </div>
               {names.map((name) => (
                 <Row key={name} name={name} />
@@ -322,14 +320,7 @@ export function WorkoutMode({
             <div key={ei} className="card exercise-card">
               <div className="exercise-head">
                 <div className="exercise-title">
-                  <span
-                    className="picker-tile"
-                    style={{
-                      background: `color-mix(in srgb, var(--series-${(exerciseInfo(ex.name).colorSlot % 8) + 1}) 15%, transparent)`,
-                    }}
-                  >
-                    {exerciseInfo(ex.name).emoji}
-                  </span>
+                  <ExerciseTile name={ex.name} size={38} />
                   <span className="exercise-name">{t(ex.name)}</span>
                   {records.best1RM != null && (
                     <span className="exercise-best">{t('ベスト1RM {n}kg', { n: records.best1RM })}</span>

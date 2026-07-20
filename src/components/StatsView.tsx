@@ -24,6 +24,7 @@ import { seriesVar } from './HomeView'
 import { t, tName } from '../lib/i18n'
 import { Header } from './Header'
 import { DayDetailSheet } from './DayDetail'
+import { ExerciseIcon } from './exercise-icons'
 
 const trendText = {
   up: { label: t('↑ レベルアップ中'), cls: 'up', desc: t('直近4週の負荷が前の4週より増えています') },
@@ -76,7 +77,7 @@ function ExerciseProgress({ entries, color }: { entries: Entry[]; color: string 
             className={`chip${ex === exercise ? ' active' : ''}`}
             onClick={() => setSelected(ex)}
           >
-            {t(ex)}
+            <ExerciseIcon name={ex} size={15} /> {t(ex)}
           </button>
         ))}
       </div>

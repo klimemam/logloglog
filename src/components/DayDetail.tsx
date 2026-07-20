@@ -3,6 +3,7 @@ import { formatDateLong } from '../lib/dates'
 import { t, tName } from '../lib/i18n'
 import { Sheet } from './Sheet'
 import { seriesVar } from './HomeView'
+import { ExerciseTile } from './exercise-icons'
 
 /** デイリーサマリーのセルをタップしたときに開く、その日の記録一覧シート */
 export function DayDetailSheet({ date, onClose }: { date: string | null; onClose: () => void }) {
@@ -23,14 +24,18 @@ export function DayDetailSheet({ date, onClose }: { date: string | null; onClose
             if (!h) return null
             return (
               <div key={e.id} className="day-detail-row">
-                <span
-                  className="picker-tile"
-                  style={{
-                    background: `color-mix(in srgb, ${seriesVar(h.colorSlot)} 14%, transparent)`,
-                  }}
-                >
-                  {h.emoji}
-                </span>
+                {e.exercise ? (
+                  <ExerciseTile name={e.exercise} size={42} />
+                ) : (
+                  <span
+                    className="picker-tile"
+                    style={{
+                      background: `color-mix(in srgb, ${seriesVar(h.colorSlot)} 14%, transparent)`,
+                    }}
+                  >
+                    {h.emoji}
+                  </span>
+                )}
                 <span className="day-detail-main">
                   <b>
                     {tName(h.name)}
