@@ -1,0 +1,38 @@
+{
+  "bvh": [
+    {
+      "name": "スクワット (CMU 22_14)",
+      "path": "./proto3d-assets/cmu_22_14.bvh",
+      "license": "CMU Mocap: 商用利用可"
+    },
+    {
+      "name": "ジャンピングジャック (Meta/MIT)",
+      "path": "./proto3d-assets/animateddrawings_jumping_jacks.bvh",
+      "license": "MIT (AnimatedDrawings)"
+    }
+  ],
+  "t2m": [
+    {
+      "name": "MoMask 公式サンプル出力 (3D再生)",
+      "path": "./proto3d-assets/t2m/momask_000612_joints.json",
+      "license": "MoMask: MIT"
+    }
+  ],
+  "media": [
+    {
+      "name": "MDM 公式出力(しゃがんで拾う動作)",
+      "path": "./proto3d-assets/t2m/mdm_example_stick_fig.gif",
+      "note": "MIT。スティックフィギュアが標準の出力形態"
+    },
+    {
+      "name": "T2M-GPT 公式出力 その1",
+      "path": "./proto3d-assets/t2m/t2mgpt_000066_pred.gif",
+      "note": "Apache-2.0。SMPLメッシュ描画の例"
+    },
+    {
+      "name": "T2M-GPT 公式出力 その2",
+      "path": "./proto3d-assets/t2m/t2mgpt_002103_pred.gif",
+      "note": "Apache-2.0"
+    }
+  ]
+}
