@@ -12,7 +12,7 @@ const deg = (d: number) => (d * Math.PI) / 180
 
 /* ===== ページUI ===== */
 
-document.body.innerHTML = ''
+document.body.textContent = ''
 const style = document.createElement('style')
 style.textContent = `
   * { box-sizing: border-box; margin: 0; }
