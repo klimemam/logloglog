@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { getSyncConfig } from './sync'
+import { getSyncConfig, loadSyncConfig } from './sync'
 
 describe('getSyncConfig', () => {
   beforeEach(() => {
@@ -18,23 +18,27 @@ describe('getSyncConfig', () => {
     vi.unstubAllGlobals()
   })
 
-  it('returns null when there is no data', () => {
+  it('returns null when there is no data', async () => {
     vi.mocked(localStorage.getItem).mockReturnValue(null)
+    await loadSyncConfig()
     expect(getSyncConfig()).toBeNull()
   })
 
-  it('returns null and does not throw on invalid JSON', () => {
+  it('returns null and does not throw on invalid JSON', async () => {
     vi.mocked(localStorage.getItem).mockReturnValue('{ invalid json }')
+    await loadSyncConfig()
     expect(getSyncConfig()).toBeNull()
   })
 
-  it('returns null for an empty object', () => {
+  it('returns null for an empty object', async () => {
     vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify({}))
+    await loadSyncConfig()
     expect(getSyncConfig()).toBeNull()
   })
 
-  it('parses legacy format with just token as gist', () => {
+  it('parses legacy format with just token as gist', async () => {
     vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify({ token: 'old-token' }))
+    await loadSyncConfig()
     expect(getSyncConfig()).toEqual({
       provider: 'gist',
       token: 'old-token',
@@ -42,10 +46,11 @@ describe('getSyncConfig', () => {
     })
   })
 
-  it('parses legacy format with token and gistId as gist', () => {
+  it('parses legacy format with token and gistId as gist', async () => {
     vi.mocked(localStorage.getItem).mockReturnValue(
       JSON.stringify({ token: 'old-token', gistId: 'some-id' })
     )
+    await loadSyncConfig()
     expect(getSyncConfig()).toEqual({
       provider: 'gist',
       token: 'old-token',
@@ -53,39 +58,44 @@ describe('getSyncConfig', () => {
     })
   })
 
-  it('parses modern gist format', () => {
+  it('parses modern gist format', async () => {
     vi.mocked(localStorage.getItem).mockReturnValue(
       JSON.stringify({ provider: 'gist', token: 'new-token' })
     )
+    await loadSyncConfig()
     expect(getSyncConfig()).toEqual({
       provider: 'gist',
       token: 'new-token',
     })
   })
 
-  it('returns null for modern gist format missing token', () => {
+  it('returns null for modern gist format missing token', async () => {
     vi.mocked(localStorage.getItem).mockReturnValue(
       JSON.stringify({ provider: 'gist', token: 123 })
     )
+    await loadSyncConfig()
     expect(getSyncConfig()).toBeNull()
   })
 
-  it('parses supabase format', () => {
+  it('parses supabase format', async () => {
     const config = { provider: 'supabase', session: { access_token: 'sb-token' } }
     vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify(config))
+    await loadSyncConfig()
     expect(getSyncConfig()).toEqual(config)
   })
 
-  it('returns null for supabase format missing session.access_token', () => {
+  it('returns null for supabase format missing session.access_token', async () => {
     const config = { provider: 'supabase', session: { refresh_token: 'refresh-only' } }
     vi.mocked(localStorage.getItem).mockReturnValue(JSON.stringify(config))
+    await loadSyncConfig()
     expect(getSyncConfig()).toBeNull()
   })
 
-  it('returns null for unknown provider', () => {
+  it('returns null for unknown provider', async () => {
     vi.mocked(localStorage.getItem).mockReturnValue(
       JSON.stringify({ provider: 'unknown', data: 'something' })
     )
+    await loadSyncConfig()
     expect(getSyncConfig()).toBeNull()
   })
 })
