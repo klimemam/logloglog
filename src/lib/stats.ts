@@ -325,26 +325,66 @@ export interface Insight {
 export const habitInsights = (habits: Habit[], entries: Entry[], nDays: number): Insight[] => {
   const { days, rows } = dailyHabitMatrix(habits, entries, nDays)
   const out: Insight[] = []
-  const avg = (xs: number[]) => xs.reduce((s, v) => s + v, 0) / xs.length
-  for (const a of rows) {
-    for (const b of rows) {
-      if (a === b || b.habit.metric === 'none') continue
-      const withVals: number[] = []
-      const withoutVals: number[] = []
-      days.forEach((_, i) => {
-        const bv = b.values[i]
-        if (bv <= 0) return
-        if (a.values[i] > 0) withVals.push(bv)
-        else withoutVals.push(bv)
-      })
-      if (withVals.length < 4 || withoutVals.length < 4) continue
-      const all = [...withVals, ...withoutVals]
-      const m = avg(all)
-      const sd = Math.sqrt(avg(all.map((v) => (v - m) ** 2))) || 1
-      const withAvg = avg(withVals)
-      const withoutAvg = avg(withoutVals)
-      const score = Math.abs(withAvg - withoutAvg) / sd
-      if (score >= 0.4) out.push({ aHabit: a.habit, bHabit: b.habit, withAvg, withoutAvg, score })
+
+  const validBs: { row: MatrixRow; sum: number; count: number; sd: number }[] = []
+  for (let i = 0; i < rows.length; i++) {
+    const b = rows[i]
+    if (b.habit.metric === 'none') continue
+    let sum = 0
+    let count = 0
+    const vals = b.values
+    for (let j = 0; j < vals.length; j++) {
+      const v = vals[j]
+      if (v > 0) {
+        sum += v
+        count++
+      }
+    }
+    if (count < 8) continue
+
+    const m = sum / count
+    let varianceSum = 0
+    for (let j = 0; j < vals.length; j++) {
+      const v = vals[j]
+      if (v > 0) varianceSum += (v - m) ** 2
+    }
+    const sd = Math.sqrt(varianceSum / count) || 1
+    validBs.push({ row: b, sum, count, sd })
+  }
+
+  const numDays = days.length
+
+  for (let i = 0; i < rows.length; i++) {
+    const a = rows[i]
+    const aVals = a.values
+    for (let j = 0; j < validBs.length; j++) {
+      const bData = validBs[j]
+      const b = bData.row
+      if (a === b) continue
+
+      const bVals = b.values
+      let withSum = 0
+      let withCount = 0
+
+      for (let k = 0; k < numDays; k++) {
+        const bv = bVals[k]
+        if (bv > 0 && aVals[k] > 0) {
+          withSum += bv
+          withCount++
+        }
+      }
+
+      const withoutCount = bData.count - withCount
+      if (withCount < 4 || withoutCount < 4) continue
+
+      const withoutSum = bData.sum - withSum
+
+      const withAvg = withSum / withCount
+      const withoutAvg = withoutSum / withoutCount
+      const score = Math.abs(withAvg - withoutAvg) / bData.sd
+      if (score >= 0.4) {
+        out.push({ aHabit: a.habit, bHabit: b.habit, withAvg, withoutAvg, score })
+      }
     }
   }
   return out.sort((x, y) => y.score - x.score).slice(0, 4)
