@@ -342,7 +342,7 @@ export function DailyMatrix({
       <div className="matrix-labels" style={{ paddingBottom: 16 }}>
         {rows.map((row) => (
           <span key={row.habit.id} style={{ height: cell + gap, lineHeight: `${cell}px` }}>
-            {row.habit.emoji} {tName(row.habit.name).slice(0, 6)}
+            {tName(row.habit.name).charAt(0)} {tName(row.habit.name).slice(0, 6)}
           </span>
         ))}
       </div>

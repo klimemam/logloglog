@@ -186,7 +186,7 @@ export function StatsView() {
               onClick={() => setSelectedId(h.id)}
             >
               <span className="color-dot" style={{ background: seriesVar(h.colorSlot) }} />
-              {h.emoji} {tName(h.name)}
+              {tName(h.name).charAt(0)} {tName(h.name)}
             </button>
           ))}
         </div>
@@ -366,8 +366,8 @@ export function StatsView() {
                   <div key={i} className="insight-row">
                     💡{' '}
                     {t(more ? '{a}をやった日は、{b}が多い:' : '{a}をやった日は、{b}が少ない:', {
-                      a: `${ins.aHabit.emoji} ${tName(ins.aHabit.name)}`,
-                      b: `${ins.bHabit.emoji} ${tName(ins.bHabit.name)}`,
+                        a: `${tName(ins.aHabit.name).charAt(0)} ${tName(ins.aHabit.name)}`,
+                        b: `${tName(ins.bHabit.name).charAt(0)} ${tName(ins.bHabit.name)}`,
                     })}{' '}
                     <span className="insight-nums">
                       {fmt(ins.withAvg)}

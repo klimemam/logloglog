@@ -3,7 +3,7 @@ import type { Entry, Habit } from '../types'
 import { bodyweightExercises, exerciseCatalog, exerciseInfo } from '../lib/exercises'
 import { epley1RM, exerciseRecords, intensityZone, recentExercises } from '../lib/stats'
 import { Sheet } from './Sheet'
-import { t } from '../lib/i18n'
+import { t, tName } from '../lib/i18n'
 import { IconChevronDown } from './icons'
 import { ExerciseTile } from './exercise-icons'
 
@@ -285,7 +285,7 @@ export function WorkoutMode({
           <IconChevronDown />
         </button>
         <div className="workout-title">
-          <span>{habit.emoji} {t('ワークアウト')}</span>
+          <span>{tName(habit.name).charAt(0)} {t('ワークアウト')}</span>
           <span className="workout-elapsed">{fmtElapsed(session.startedAt)}</span>
         </div>
         <button className="workout-finish" onClick={onFinish} disabled={doneSets === 0}>

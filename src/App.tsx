@@ -4,7 +4,6 @@ import { HomeView } from './components/HomeView'
 import { StatsView } from './components/StatsView'
 import { HabitsView } from './components/HabitsView'
 import { SettingsView } from './components/SettingsView'
-import { Sheet } from './components/Sheet'
 import { DialogHost } from './components/dialog'
 import { IconX } from './components/icons'
 import { getSyncConfig, handleAuthRedirect, syncNow } from './lib/sync'
@@ -56,60 +55,20 @@ function UpdateBanner() {
 // (レンダリング前に一度だけ処理する)
 handleAuthRedirect()
 
-const ONBOARD_KEY = 'logloglog:onboarded'
-
-/** 初めて開いた人向けのウェルカム画面(データがある既存ユーザーには出ない) */
-function Onboarding() {
-  const [open, setOpen] = useState(
-    () => !localStorage.getItem(ONBOARD_KEY) && !localStorage.getItem('logloglog:v1'),
-  )
-  const close = () => {
-    localStorage.setItem(ONBOARD_KEY, '1')
-    setOpen(false)
-  }
-  return (
-    <Sheet open={open} title={t('ようこそ 👋')} onClose={close}>
-      <div className="onboard">
-        <div className="onboard-item">
-          <span className="onboard-icon">✏️</span>
-          <div>
-            <b>{t('開いてすぐ、ワンタップで記録')}</b>
-            <p>{t('ホームの「+」を押すだけ。ランニングや読書など、習慣は自由に追加できます。')}</p>
-          </div>
-        </div>
-        <div className="onboard-item">
-          <span className="onboard-icon">💪</span>
-          <div>
-            <b>{t('筋トレはワークアウトモード')}</b>
-            <p>{t('種目を選ぶと前回のセットが入った状態でスタート。✓するだけで休憩タイマーも動きます。')}</p>
-          </div>
-        </div>
-        <div className="onboard-item">
-          <span className="onboard-icon">📈</span>
-          <div>
-            <b>{t('続けるほど、成長が見える')}</b>
-            <p>{t('週の目標達成・連続記録・推定1RMの伸びを統計タブで確認できます。')}</p>
-          </div>
-        </div>
-        <p className="onboard-note">
-{t('データはあなたの端末の中だけに保存されます(登録不要・無料)。ホーム画面に追加するとアプリとして使えます。')}
-        </p>
-        <button className="primary-btn" onClick={close}>
-          {t('はじめる')}
-        </button>
-      </div>
-    </Sheet>
-  )
-}
-
 /** 同期が設定されていれば、起動時と変更のたび(2.5秒デバウンス)に自動同期する */
 function SyncManager() {
   const { data, dispatch } = useStore()
   const dataRef = useRef(data)
   dataRef.current = data
+  const isFirstRef = useRef(true)
 
   useEffect(() => {
     if (!getSyncConfig()) return
+    if (isFirstRef.current) {
+      isFirstRef.current = false
+      syncNow(data, (merged) => dispatch({ type: 'import', data: merged }))
+      return
+    }
     const t = setTimeout(() => {
       syncNow(data, (merged) => dispatch({ type: 'import', data: merged }))
     }, 2500)
@@ -183,7 +142,6 @@ export default function App() {
   return (
     <StoreProvider>
       <SyncManager />
-      <Onboarding />
       <UpdateBanner />
       <DialogHost />
       {tab === 'home' && <HomeView onOpenStats={() => setTab('stats')} onOpenHabits={() => setTab('habits')} />}

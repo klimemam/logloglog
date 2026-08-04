@@ -33,7 +33,7 @@ export function DayDetailSheet({ date, onClose }: { date: string | null; onClose
                       background: `color-mix(in srgb, ${seriesVar(h.colorSlot)} 14%, transparent)`,
                     }}
                   >
-                    {h.emoji}
+                    {tName(h.name).charAt(0)}
                   </span>
                 )}
                 <span className="day-detail-main">

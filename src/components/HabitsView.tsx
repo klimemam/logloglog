@@ -263,7 +263,7 @@ export function HabitsView() {
           {data.habits.map((h) => (
             <div key={h.id} className="habit-row">
               <span className="color-dot" style={{ background: seriesVar(h.colorSlot) }} />
-              <span>{h.emoji}</span>
+              <span>{tName(h.name).charAt(0)}</span>
               <div className="grow">
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{tName(h.name)}</div>
                 <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
@@ -307,7 +307,7 @@ export function HabitsView() {
             return (
               <div key={e.id} className="entry-row">
                 <span>
-                  {h?.emoji} {h ? tName(h.name) : t('(削除済み)')}
+                  {h ? tName(h.name).charAt(0) : ''} {h ? tName(h.name) : t('(削除済み)')}
                   {e.exercise
                     ? ` ${t(e.exercise)} ${e.weight != null ? `${e.weight}kg×` : ''}${e.reps ?? '-'}×${e.sets ?? '-'}`
                     : e.value != null && ` ${e.value}${h?.unit ?? ''}`}

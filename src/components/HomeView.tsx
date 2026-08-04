@@ -7,7 +7,7 @@ import { Sheet } from './Sheet'
 import { Header } from './Header'
 import { DayDetailSheet } from './DayDetail'
 import { appConfirm } from './dialog'
-import { IconChevronRight, IconPlay } from './icons'
+import { IconChevronRight, IconPlay, IconEdit, IconActivity, IconChart, IconX } from './icons'
 import { DailyMatrix } from './charts'
 import { t, tName } from '../lib/i18n'
 import {
@@ -92,7 +92,7 @@ function HabitCard({
     <div className="card habit-tappable" onClick={mainAction}>
       <div className="habit-card">
         <div className="habit-emoji" style={{ background: wash }}>
-          {habit.emoji}
+          {tName(habit.name).charAt(0)}
         </div>
         <div className="habit-info">
           <div className="habit-name">
@@ -173,7 +173,7 @@ function HabitCard({
           </button>
           <Sheet
             open={open}
-            title={`${habit.emoji} ${t('{name}を記録', { name: tName(habit.name) })}`}
+            title={`${tName(habit.name).charAt(0)} ${t('{name}を記録', { name: tName(habit.name) })}`}
             onClose={() => setOpen(false)}
           >
             <div className="form-grid">
@@ -226,6 +226,58 @@ function HabitCard({
           </Sheet>
         </span>
       )}
+    </div>
+  )
+}
+
+const ONBOARD_KEY = 'logloglog:onboarded'
+
+function OnboardingCard() {
+  const [open, setOpen] = useState(
+    () => !localStorage.getItem(ONBOARD_KEY) && !localStorage.getItem('logloglog:v1'),
+  )
+  const close = () => {
+    localStorage.setItem(ONBOARD_KEY, '1')
+    setOpen(false)
+  }
+  if (!open) return null
+  return (
+    <div className="card" style={{ padding: 16, marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <h3 style={{ margin: 0, fontSize: 18 }}>{t('ようこそ 👋')}</h3>
+        <button onClick={close} style={{ background: 'none', border: 'none', color: 'var(--text-secondary)' }}>
+          <IconX />
+        </button>
+      </div>
+      <div className="onboard">
+        <div className="onboard-item">
+          <span className="onboard-icon"><IconEdit /></span>
+          <div>
+            <b>{t('開いてすぐ、ワンタップで記録')}</b>
+            <p>{t('ホームの「+」を押すだけ。ランニングや読書など、習慣は自由に追加できます。')}</p>
+          </div>
+        </div>
+        <div className="onboard-item">
+          <span className="onboard-icon"><IconActivity /></span>
+          <div>
+            <b>{t('筋トレはワークアウトモード')}</b>
+            <p>{t('種目を選ぶと前回のセットが入った状態でスタート。✓するだけで休憩タイマーも動きます。')}</p>
+          </div>
+        </div>
+        <div className="onboard-item">
+          <span className="onboard-icon"><IconChart /></span>
+          <div>
+            <b>{t('続けるほど、成長が見える')}</b>
+            <p>{t('週の目標達成・連続記録・推定1RMの伸びを統計タブで確認できます。')}</p>
+          </div>
+        </div>
+        <p className="onboard-note" style={{ marginBottom: 12 }}>
+          {t('データはあなたの端末の中だけに保存されます(登録不要・無料)。ホーム画面に追加するとアプリとして使えます。')}
+        </p>
+        <button className="primary-btn" onClick={close}>
+          {t('はじめる')}
+        </button>
+      </div>
     </div>
   )
 }
@@ -323,6 +375,7 @@ export function HomeView({ onOpenStats, onOpenHabits }: { onOpenStats?: () => vo
     <>
       <Header title={t('今日の記録')} subtitle={formatDateLong(todayKey())} />
       <main className="app-main">
+        <OnboardingCard />
         {/* 動線の始点: まず全習慣の状況を俯瞰してから、下で記録する */}
         {habits.length > 0 && (
           <div className="card chart-card home-summary">
