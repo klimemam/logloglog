@@ -20,6 +20,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # ユニットテスト。ここが落ちればマージできない
+      - run: npm test
       # tsc -b(型チェック)+ vite build。型エラーやビルド失敗はここで落ちる
       - run: npm run build
       - name: ビルド成果物の健全性チェック
