@@ -8,6 +8,7 @@
 import type { AppData, Entry, Habit } from '../types'
 import { SUPABASE_ANON_KEY, SUPABASE_URL } from './backend'
 import { t } from './i18n'
+import { SecureStoragePlugin } from 'capacitor-secure-storage-plugin'
 
 /* ===== 設定 ===== */
 
@@ -27,31 +28,61 @@ const CFG_KEY = 'logloglog:sync:v1'
 const GIST_DESC = 'logloglog habit data (auto-synced)'
 const FILE = 'logloglog-data.json'
 
-export const getSyncConfig = (): SyncConfig | null => {
+let memoryConfig: SyncConfig | null = null
+
+export const loadSyncConfig = async (): Promise<void> => {
   try {
-    const raw = localStorage.getItem(CFG_KEY)
-    if (raw) {
-      const cfg = JSON.parse(raw) as Record<string, unknown>
-      // 旧形式({token}のみ)はgistとして読む
+    const { value } = await SecureStoragePlugin.get({ key: CFG_KEY })
+    if (value) {
+      const cfg = JSON.parse(value) as Record<string, unknown>
       if (!cfg.provider && typeof cfg.token === 'string') {
-        return {
+        memoryConfig = {
           provider: 'gist',
           token: cfg.token,
           gistId: typeof cfg.gistId === 'string' ? cfg.gistId : undefined,
         }
-      }
-      if (cfg.provider === 'gist' && typeof cfg.token === 'string') {
-        return cfg as unknown as SyncConfig
-      }
-      if (cfg.provider === 'supabase' && (cfg.session as SupabaseSession | undefined)?.access_token) {
-        return cfg as unknown as SyncConfig
+      } else if (cfg.provider === 'gist' && typeof cfg.token === 'string') {
+        memoryConfig = cfg as unknown as SyncConfig
+      } else if (cfg.provider === 'supabase' && (cfg.session as SupabaseSession | undefined)?.access_token) {
+        memoryConfig = cfg as unknown as SyncConfig
       }
     }
   } catch {
-    // 壊れた設定は未設定扱い
+    // Attempt migration from localStorage if SecureStorage doesn't have it
+    try {
+      const raw = localStorage.getItem(CFG_KEY)
+      if (raw) {
+        const cfg = JSON.parse(raw) as Record<string, unknown>
+        let migratedConfig: SyncConfig | null = null
+        if (!cfg.provider && typeof cfg.token === 'string') {
+          migratedConfig = {
+            provider: 'gist',
+            token: cfg.token,
+            gistId: typeof cfg.gistId === 'string' ? cfg.gistId : undefined,
+          }
+        } else if (cfg.provider === 'gist' && typeof cfg.token === 'string') {
+          migratedConfig = cfg as unknown as SyncConfig
+        } else if (cfg.provider === 'supabase' && (cfg.session as SupabaseSession | undefined)?.access_token) {
+          migratedConfig = cfg as unknown as SyncConfig
+        }
+
+        if (migratedConfig) {
+          memoryConfig = migratedConfig
+          await SecureStoragePlugin.set({ key: CFG_KEY, value: JSON.stringify(migratedConfig) })
+          localStorage.removeItem(CFG_KEY) // Migration complete, remove from insecure storage
+        }
+      }
+    } catch {
+      // 壊れた設定は未設定扱い
+    }
   }
-  return null
+
+  if (memoryConfig) {
+    status = { state: 'idle' }
+  }
 }
+
+export const getSyncConfig = (): SyncConfig | null => memoryConfig
 
 export const setSyncConfig = (cfg: SyncConfig | null) => {
   // 同期をつなぐ瞬間のローカルデータを自動バックアップしておく。
@@ -69,8 +100,12 @@ export const setSyncConfig = (cfg: SyncConfig | null) => {
       // 容量不足などでバックアップできなくても接続自体は続行する
     }
   }
-  if (cfg) localStorage.setItem(CFG_KEY, JSON.stringify(cfg))
-  else localStorage.removeItem(CFG_KEY)
+  memoryConfig = cfg
+  if (cfg) {
+    SecureStoragePlugin.set({ key: CFG_KEY, value: JSON.stringify(cfg) }).catch(() => {})
+  } else {
+    SecureStoragePlugin.remove({ key: CFG_KEY }).catch(() => {})
+  }
   setStatus(cfg ? { state: 'idle', lastSyncedAt: status.lastSyncedAt } : { state: 'off' })
 }
 
@@ -114,7 +149,7 @@ const setStatus = (s: SyncStatus) => {
   listeners.forEach((cb) => cb())
 }
 
-if (typeof localStorage !== 'undefined' && getSyncConfig()) status = { state: 'idle' }
+// We will update the status once loadSyncConfig completes successfully.
 
 /* ===== マージ ===== */
 
