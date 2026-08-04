@@ -12,7 +12,7 @@ const deg = (d: number) => (d * Math.PI) / 180
 
 /* ===== ページUI ===== */
 
-document.body.innerHTML = ''
+document.body.textContent = ''
 const style = document.createElement('style')
 style.textContent = `
   * { box-sizing: border-box; margin: 0; }
@@ -508,7 +508,7 @@ let current = poses['スクワット']
 let bvhStatus = ''
 
 function setSub(items: { label: string; active: boolean; onTap: () => void }[]) {
-  subEl.innerHTML = ''
+  subEl.textContent = ''
   for (const it of items) {
     const b = document.createElement('button')
     b.textContent = it.label
@@ -594,18 +594,33 @@ function apply() {
         },
       },
     ])
-    mediaEl.innerHTML = ''
+    mediaEl.textContent = ''
     const media = manifest.media ?? []
     if (!media.length) {
-      mediaEl.innerHTML = '<p style="color:#898781;font-size:13px">生成AIの出力サンプルが未配置です(調達中)。</p>'
+      const p = document.createElement('p')
+      p.style.color = '#898781'
+      p.style.fontSize = '13px'
+      p.textContent = '生成AIの出力サンプルが未配置です(調達中)。'
+      mediaEl.appendChild(p)
     }
     for (const m of media) {
       const item = document.createElement('div')
       item.className = 'item'
       const isVideo = /\.(mp4|webm)$/i.test(m.path)
-      item.innerHTML = isVideo
-        ? `<video src="${m.path}" autoplay loop muted playsinline></video>`
-        : `<img src="${m.path}" alt="${m.name}" />`
+      if (isVideo) {
+        const video = document.createElement('video')
+        video.src = m.path
+        video.autoplay = true
+        video.loop = true
+        video.muted = true
+        video.playsInline = true
+        item.appendChild(video)
+      } else {
+        const img = document.createElement('img')
+        img.src = m.path
+        img.alt = m.name
+        item.appendChild(img)
+      }
       const cap = document.createElement('div')
       cap.className = 'cap'
       cap.textContent = `${m.name}${m.note ? ' — ' + m.note : ''}`
