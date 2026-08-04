@@ -289,22 +289,35 @@ export function HomeView({ onOpenStats, onOpenHabits }: { onOpenStats?: () => vo
     let exCount = 0
     let setCount = 0
     for (const ex of session.exercises) {
-      const done = ex.rows
-        .filter((r) => r.done)
-        .map((r) => ({ weight: Number(r.weight) || undefined, reps: Number(r.reps) || 0 }))
-        .filter((s) => s.reps > 0)
+      let maxReps = 0
+      let maxWeight = -Infinity
+      let hasWeight = false
+      const done = ex.rows.reduce<{ weight?: number; reps: number }[]>((acc, r) => {
+        if (r.done) {
+          const reps = Number(r.reps) || 0
+          if (reps > 0) {
+            const w = Number(r.weight) || undefined
+            acc.push({ weight: w, reps })
+            if (reps > maxReps) maxReps = reps
+            if (w != null && w > maxWeight) {
+              maxWeight = w
+              hasWeight = true
+            }
+          }
+        }
+        return acc
+      }, [])
       if (!done.length) continue
       exCount += 1
       setCount += done.length
-      const weights = done.filter((s) => s.weight != null).map((s) => s.weight!)
       dispatch({
         type: 'addEntry',
         habitId: session.habitId,
         exercise: ex.name,
         setsDetail: done,
         sets: done.length,
-        reps: Math.max(...done.map((s) => s.reps)),
-        weight: weights.length ? Math.max(...weights) : undefined,
+        reps: maxReps,
+        weight: hasWeight ? maxWeight : undefined,
         value: done.length,
       })
     }
