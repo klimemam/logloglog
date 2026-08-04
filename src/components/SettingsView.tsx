@@ -281,7 +281,8 @@ const makeQrSvg = (code: string): string | null => {
     const qr = qrcode(0, 'L')
     qr.addData(code, 'Byte')
     qr.make()
-    return qr.createSvgTag({ cellSize: 3, margin: 2, scalable: true })
+    const svg = qr.createSvgTag({ cellSize: 3, margin: 2, scalable: true })
+    return `data:image/svg+xml;base64,${btoa(svg)}`
   } catch {
     return null
   }
@@ -320,7 +321,9 @@ function TransferBody() {
           <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
             {t('QRコード(別の端末のカメラで読み取り)')}
           </p>
-          <div className="qr-box" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+          <div className="qr-box">
+            <img src={qrSvg} alt="QR Code" />
+          </div>
         </>
       )}
       {outCode && !qrSvg && (
