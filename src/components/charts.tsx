@@ -324,8 +324,7 @@ export function DailyMatrix({
   // 初期表示は最新の日(右端)に合わせる
   useEffect(() => {
     if (wrapRef.current) wrapRef.current.scrollLeft = wrapRef.current.scrollWidth
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [wrapRef])
   const cell = 15
   const gap = 3
   const width = days.length * (cell + gap)

@@ -1663,7 +1663,7 @@ textarea.transfer-code:focus {
   margin: 0 auto 12px;
 }
 
-.qr-box svg {
+.qr-box svg, .qr-box img {
   display: block;
   width: 200px;
   height: 200px;

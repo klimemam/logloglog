@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import qrcode from 'qrcode-generator'
 import { useStore } from '../store'
 import type { AppData } from '../types'
@@ -281,7 +281,8 @@ const makeQrSvg = (code: string): string | null => {
     const qr = qrcode(0, 'L')
     qr.addData(code, 'Byte')
     qr.make()
-    return qr.createSvgTag({ cellSize: 3, margin: 2, scalable: true })
+    const svg = qr.createSvgTag({ cellSize: 3, margin: 2, scalable: true })
+    return `data:image/svg+xml;base64,${btoa(svg)}`
   } catch {
     return null
   }
@@ -320,7 +321,9 @@ function TransferBody() {
           <p style={{ fontSize: 11, color: 'var(--text-muted)' }}>
             {t('QRコード(別の端末のカメラで読み取り)')}
           </p>
-          <div className="qr-box" dangerouslySetInnerHTML={{ __html: qrSvg }} />
+          <div className="qr-box">
+            <img src={qrSvg} alt="QR Code" />
+          </div>
         </>
       )}
       {outCode && !qrSvg && (
@@ -417,23 +420,27 @@ function DataBody() {
   const importData = (file: File) => {
     const reader = new FileReader()
     reader.onload = async () => {
+      let parsed: AppData
       try {
-        const parsed = JSON.parse(String(reader.result)) as AppData
-        if (parsed.version === 1 && Array.isArray(parsed.habits) && Array.isArray(parsed.entries)) {
-          if (
-            await appConfirm(t('現在のデータをインポート内容で置き換えます。よろしいですか?'), {
-              danger: true,
-              confirmLabel: t('置き換える'),
-            })
-          ) {
-            dispatch({ type: 'import', data: parsed })
-          }
-        } else {
-          appAlert(t('ファイル形式が正しくありません'))
-        }
+        parsed = JSON.parse(String(reader.result)) as AppData
       } catch {
         appAlert(t('ファイルを読み込めませんでした'))
+        return
       }
+
+      if (!(parsed.version === 1 && Array.isArray(parsed.habits) && Array.isArray(parsed.entries))) {
+        appAlert(t('ファイル形式が正しくありません'))
+        return
+      }
+
+      const confirmed = await appConfirm(t('現在のデータをインポート内容で置き換えます。よろしいですか?'), {
+        danger: true,
+        confirmLabel: t('置き換える'),
+      })
+
+      if (!confirmed) return
+
+      dispatch({ type: 'import', data: parsed })
     }
     reader.readAsText(file)
   }
@@ -493,7 +500,7 @@ function AboutBody() {
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState('')
 
-  const check = async () => {
+  const check = useCallback(async () => {
     setChecking(true)
     setError('')
     try {
@@ -503,12 +510,11 @@ function AboutBody() {
     } finally {
       setChecking(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     check()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [check])
 
   return (
     <div style={{ display: 'grid', gap: 8 }}>
