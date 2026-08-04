@@ -325,26 +325,62 @@ export interface Insight {
 export const habitInsights = (habits: Habit[], entries: Entry[], nDays: number): Insight[] => {
   const { days, rows } = dailyHabitMatrix(habits, entries, nDays)
   const out: Insight[] = []
-  const avg = (xs: number[]) => xs.reduce((s, v) => s + v, 0) / xs.length
-  for (const a of rows) {
-    for (const b of rows) {
-      if (a === b || b.habit.metric === 'none') continue
-      const withVals: number[] = []
-      const withoutVals: number[] = []
-      days.forEach((_, i) => {
-        const bv = b.values[i]
-        if (bv <= 0) return
-        if (a.values[i] > 0) withVals.push(bv)
-        else withoutVals.push(bv)
-      })
-      if (withVals.length < 4 || withoutVals.length < 4) continue
-      const all = [...withVals, ...withoutVals]
-      const m = avg(all)
-      const sd = Math.sqrt(avg(all.map((v) => (v - m) ** 2))) || 1
-      const withAvg = avg(withVals)
-      const withoutAvg = avg(withoutVals)
+
+  const bStats = []
+  for (const b of rows) {
+    if (b.habit.metric === 'none') continue
+    const validIndices: number[] = []
+    let sum = 0
+    let count = 0
+
+    for (let i = 0; i < days.length; i++) {
+      const bv = b.values[i]
+      if (bv > 0) {
+        validIndices.push(i)
+        sum += bv
+        count++
+      }
+    }
+
+    if (count < 8) continue
+
+    const m = sum / count
+    let sqSum = 0
+    for (let j = 0; j < count; j++) {
+      sqSum += (b.values[validIndices[j]] - m) ** 2
+    }
+    const sd = Math.sqrt(sqSum / count) || 1
+
+    bStats.push({ b, validIndices, count, sum, sd })
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    const a = rows[i]
+    for (let j = 0; j < bStats.length; j++) {
+      const { b, validIndices, count, sum, sd } = bStats[j]
+      if (a === b) continue
+
+      let withCount = 0
+      let withSum = 0
+
+      for (let k = 0; k < count; k++) {
+        const idx = validIndices[k]
+        if (a.values[idx] > 0) {
+          withCount++
+          withSum += b.values[idx]
+        }
+      }
+
+      const withoutCount = count - withCount
+      if (withCount < 4 || withoutCount < 4) continue
+
+      const withAvg = withSum / withCount
+      const withoutAvg = (sum - withSum) / withoutCount
       const score = Math.abs(withAvg - withoutAvg) / sd
-      if (score >= 0.4) out.push({ aHabit: a.habit, bHabit: b.habit, withAvg, withoutAvg, score })
+
+      if (score >= 0.4) {
+        out.push({ aHabit: a.habit, bHabit: b.habit, withAvg, withoutAvg, score })
+      }
     }
   }
   return out.sort((x, y) => y.score - x.score).slice(0, 4)
