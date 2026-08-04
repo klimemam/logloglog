@@ -19,8 +19,8 @@ export const aggregateByDay = (entries: Entry[]): Map<string, DayAgg> => {
 }
 
 /** 連続記録日数。今日まだ記録がなくても昨日まで続いていればストリークは生きている扱い */
-export const currentStreak = (byDay: Map<string, DayAgg>): number => {
-  let day = todayKey()
+export const currentStreak = (byDay: Map<string, DayAgg>, today: string = todayKey()): number => {
+  let day = today
   if (!byDay.has(day)) day = addDays(day, -1)
   let streak = 0
   while (byDay.has(day)) {
