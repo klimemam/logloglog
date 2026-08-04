@@ -2,7 +2,8 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [claude/habit-tracking-app-kjh1a9, main]
+    # 本番公開は main へのマージ時のみ(作業ブランチのプッシュでは公開しない)
+    branches: [main]
   workflow_dispatch:
 
 permissions:
