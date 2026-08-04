@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { getSyncConfig } from './sync'
 
-const CFG_KEY = 'logloglog:sync:v1'
-
 describe('getSyncConfig', () => {
   beforeEach(() => {
     vi.stubGlobal(
