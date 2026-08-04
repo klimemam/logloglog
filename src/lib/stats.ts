@@ -285,10 +285,23 @@ export const dailyHabitMatrix = (
     d = addDays(d, 1)
   }
   const today = todayKey()
+
+  const entriesByHabit = new Map<string, Entry[]>()
+  for (const e of entries) {
+    let list = entriesByHabit.get(e.habitId)
+    if (!list) {
+      list = []
+      entriesByHabit.set(e.habitId, list)
+    }
+    list.push(e)
+  }
+
   const rows = habits.map((h) => {
+    const habitEntries = entriesByHabit.get(h.id) ?? []
+
     // やめる習慣は反転: クリアした日 = 1(良い)、やってしまった日 = -1(赤で表示)
     if (h.kind === 'quit') {
-      const slips = new Set(entries.filter((e) => e.habitId === h.id).map((e) => e.date))
+      const slips = new Set(habitEntries.map((e) => e.date))
       const created = h.createdAt.slice(0, 10)
       const values = days.map((day) =>
         day < created || day > today ? 0 : slips.has(day) ? -1 : 1,
@@ -296,8 +309,7 @@ export const dailyHabitMatrix = (
       return { habit: h, values, max: 1 }
     }
     const byDay = new Map<string, number>()
-    for (const e of entries) {
-      if (e.habitId !== h.id) continue
+    for (const e of habitEntries) {
       byDay.set(e.date, (byDay.get(e.date) ?? 0) + (h.metric === 'none' ? 1 : (e.value ?? 0)))
     }
     const values = days.map((day) => byDay.get(day) ?? 0)
