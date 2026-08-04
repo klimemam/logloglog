@@ -417,23 +417,27 @@ function DataBody() {
   const importData = (file: File) => {
     const reader = new FileReader()
     reader.onload = async () => {
+      let parsed: AppData
       try {
-        const parsed = JSON.parse(String(reader.result)) as AppData
-        if (parsed.version === 1 && Array.isArray(parsed.habits) && Array.isArray(parsed.entries)) {
-          if (
-            await appConfirm(t('現在のデータをインポート内容で置き換えます。よろしいですか?'), {
-              danger: true,
-              confirmLabel: t('置き換える'),
-            })
-          ) {
-            dispatch({ type: 'import', data: parsed })
-          }
-        } else {
-          appAlert(t('ファイル形式が正しくありません'))
-        }
+        parsed = JSON.parse(String(reader.result)) as AppData
       } catch {
         appAlert(t('ファイルを読み込めませんでした'))
+        return
       }
+
+      if (!(parsed.version === 1 && Array.isArray(parsed.habits) && Array.isArray(parsed.entries))) {
+        appAlert(t('ファイル形式が正しくありません'))
+        return
+      }
+
+      const confirmed = await appConfirm(t('現在のデータをインポート内容で置き換えます。よろしいですか?'), {
+        danger: true,
+        confirmLabel: t('置き換える'),
+      })
+
+      if (!confirmed) return
+
+      dispatch({ type: 'import', data: parsed })
     }
     reader.readAsText(file)
   }
