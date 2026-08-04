@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState } from 'react'
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react'
 import qrcode from 'qrcode-generator'
 import { useStore } from '../store'
 import type { AppData } from '../types'
@@ -493,7 +493,7 @@ function AboutBody() {
   const [checking, setChecking] = useState(false)
   const [error, setError] = useState('')
 
-  const check = async () => {
+  const check = useCallback(async () => {
     setChecking(true)
     setError('')
     try {
@@ -503,12 +503,11 @@ function AboutBody() {
     } finally {
       setChecking(false)
     }
-  }
+  }, [])
 
   useEffect(() => {
     check()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [check])
 
   return (
     <div style={{ display: 'grid', gap: 8 }}>
