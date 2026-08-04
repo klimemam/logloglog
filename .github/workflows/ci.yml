@@ -1,0 +1,30 @@
+name: CI
+
+# PRの検証用。ここが緑にならないとmainへマージしない、という運用の土台
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # tsc -b(型チェック)+ vite build。型エラーやビルド失敗はここで落ちる
+      - run: npm run build
+      - name: ビルド成果物の健全性チェック
+        run: |
+          for f in dist/index.html dist/sw.js dist/manifest.webmanifest; do
+            test -f "$f" || { echo "::error::$f が生成されていません"; exit 1; }
+          done
+          echo "dist:"; ls -la dist
