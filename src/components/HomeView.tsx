@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../store'
 import type { Habit } from '../types'
 import { formatDateLong, todayKey } from '../lib/dates'
@@ -46,16 +46,35 @@ function HabitCard({
   const [value, setValue] = useState<string>(habit.defaultValue?.toString() ?? '')
   const [note, setNote] = useState('')
 
-  const entries = data.entries.filter((e) => e.habitId === habit.id)
-  const today = todayKey()
-  const todayEntries = entries.filter((e) => e.date === today)
-  const todayValue = todayEntries.reduce((s, e) => s + (e.value ?? 0), 0)
-  const isStrength = habit.kind === 'strength'
-  const isQuit = habit.kind === 'quit'
-  // やめる習慣: 記録がないこと自体が成果なので、継続日数はスリップ記録から逆算する
-  const streak = isQuit ? quitStats(habit, entries).current : currentStreak(aggregateByDay(entries))
-  const week = thisWeekProgress(data.entries, habit)
-  const todayExercises = new Set(todayEntries.map((e) => e.exercise).filter(Boolean)).size
+  const {
+    todayEntries,
+    todayValue,
+    isStrength,
+    isQuit,
+    streak,
+    week,
+    todayExercises,
+  } = useMemo(() => {
+    const entries = data.entries.filter((e) => e.habitId === habit.id)
+    const today = todayKey()
+    const todayEntries = entries.filter((e) => e.date === today)
+    const todayValue = todayEntries.reduce((s, e) => s + (e.value ?? 0), 0)
+    const isStrength = habit.kind === 'strength'
+    const isQuit = habit.kind === 'quit'
+    // やめる習慣: 記録がないこと自体が成果なので、継続日数はスリップ記録から逆算する
+    const streak = isQuit ? quitStats(habit, entries).current : currentStreak(aggregateByDay(entries))
+    const week = thisWeekProgress(data.entries, habit)
+    const todayExercises = new Set(todayEntries.map((e) => e.exercise).filter(Boolean)).size
+    return {
+      todayEntries,
+      todayValue,
+      isStrength,
+      isQuit,
+      streak,
+      week,
+      todayExercises,
+    }
+  }, [data.entries, habit])
 
   const log = (v?: number, n?: string) => {
     dispatch({ type: 'addEntry', habitId: habit.id, value: v, note: n || undefined })
