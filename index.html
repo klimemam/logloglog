@@ -27,6 +27,26 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('./sw.js').catch(() => {})
+          // 初回訪問時、Service Workerが制御を持つ前に読み込まれたファイルは
+          // キャッシュされず「インストール直後に圏外だと開けない」状態になっていた。
+          // 実際に読み込んだリソースをこちらから登録しておく
+          if ('caches' in window) {
+            var urls = ['./', './index.html', './manifest.webmanifest']
+            try {
+              performance.getEntriesByType('resource').forEach(function (e) {
+                if (e.name.indexOf(location.origin) === 0 && !/update-check=/.test(e.name)) {
+                  urls.push(e.name)
+                }
+              })
+            } catch (_) {}
+            caches.open('logloglog-v1').then(function (c) {
+              urls.forEach(function (u) {
+                c.match(u).then(function (hit) {
+                  if (!hit) c.add(u).catch(function () {})
+                })
+              })
+            })
+          }
         })
       }
     </script>

@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { useStore } from '../store'
 import type { Habit, MetricType } from '../types'
 import { seriesVar } from './HomeView'
-import { t, tName } from '../lib/i18n'
+import { t, tName, tUnit } from '../lib/i18n'
 import { Header } from './Header'
 import { appConfirm } from './dialog'
+import { setsSummary } from '../lib/format'
 
 /** フォーム上の「記録するもの」。strength / quit は保存時に kind へ変換される */
 type FormMetric = MetricType | 'strength' | 'quit'
@@ -150,7 +151,7 @@ function HabitForm({
                 type="button"
                 className={form.colorSlot === i ? 'selected' : ''}
                 style={{ background: seriesVar(i) }}
-                aria-label={`色 ${i + 1}`}
+                aria-label={t('色 {n}', { n: i + 1 })}
                 onClick={() => set('colorSlot', i)}
               />
             ))}
@@ -203,7 +204,15 @@ export function HabitsView() {
     setEditing(null)
   }
 
-  const openPreset = (p: (typeof presets)[number] | null) => {
+  const openPreset = async (p: (typeof presets)[number] | null) => {
+    // 同名の習慣があるまま押すと黙って2枚目が作られていた
+    if (p && data.habits.some((h) => tName(h.name) === p.name && !h.archived)) {
+      const ok = await appConfirm(
+        t('「{name}」はすでにあります。もう1つ作りますか?', { name: p.name }),
+        { confirmLabel: t('作る') },
+      )
+      if (!ok) return
+    }
     setSeed({ ...emptyForm, ...(p ?? {}) })
     setSeedId((n) => n + 1)
     setEditing('new')
@@ -225,7 +234,7 @@ export function HabitsView() {
             </p>
             <div className="chip-row" style={{ flexWrap: 'wrap' }}>
               {presets.map((p) => (
-                <button key={p.name} className="chip" onClick={() => openPreset(p)}>
+                <button key={p.name} className="chip" onClick={() => void openPreset(p)}>
                   {p.emoji} {p.name}
                 </button>
               ))}
@@ -274,7 +283,7 @@ export function HabitsView() {
                     ? t('・ 種目×セット×回数×重量を記録')
                     : h.kind !== 'quit' &&
                       h.metric !== 'none' &&
-                      `${t('・ {u}を記録', { u: h.unit })}${h.lowerIsBetter ? t('(小さいほど良い)') : ''}`}
+                      `${t('・ {u}を記録', { u: tUnit(h.unit) })}${h.lowerIsBetter ? t('(小さいほど良い)') : ''}`}
                 </div>
               </div>
               <button className="text-btn" onClick={() => setEditing(h)}>
@@ -293,7 +302,7 @@ export function HabitsView() {
             </div>
           ))}
           {!editing && (
-            <button className="primary-btn" style={{ marginTop: 12 }} onClick={() => openPreset(null)}>
+            <button className="primary-btn" style={{ marginTop: 12 }} onClick={() => void openPreset(null)}>
               {t('+ 習慣を追加')}
             </button>
           )}
@@ -308,9 +317,14 @@ export function HabitsView() {
               <div key={e.id} className="entry-row">
                 <span>
                   {h?.emoji} {h ? tName(h.name) : t('(削除済み)')}
-                  {e.exercise
-                    ? ` ${t(e.exercise)} ${e.weight != null ? `${e.weight}kg×` : ''}${e.reps ?? '-'}×${e.sets ?? '-'}`
-                    : e.value != null && ` ${e.value}${h?.unit ?? ''}`}
+                  {/* やめる習慣のエントリは失敗の記録。通常記録と同じ体裁だと達成に見える */}
+                  {h?.kind === 'quit' ? (
+                    <b className="slip-note"> {t('やってしまった')}</b>
+                  ) : e.exercise ? (
+                    ` ${t(e.exercise)} ${setsSummary(e)}`
+                  ) : (
+                    e.value != null && ` ${e.value}${tUnit(h?.unit ?? '')}`
+                  )}
                   {e.note && ` — ${e.note}`}
                 </span>
                 <span className="meta">

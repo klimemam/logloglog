@@ -9,6 +9,8 @@ import { t } from '../lib/i18n'
 interface DialogRequest {
   message: string
   confirmLabel?: string
+  /** 「キャンセル」以外の選択肢を出したいとき(例:「✓した分だけ」) */
+  cancelLabel?: string
   danger?: boolean
   alertOnly?: boolean
   resolve: (ok: boolean) => void
@@ -20,7 +22,7 @@ const notify = () => listeners.forEach((cb) => cb())
 
 export const appConfirm = (
   message: string,
-  opts?: { confirmLabel?: string; danger?: boolean },
+  opts?: { confirmLabel?: string; cancelLabel?: string; danger?: boolean },
 ): Promise<boolean> =>
   new Promise((resolve) => {
     current = { message, ...opts, resolve }
@@ -57,7 +59,7 @@ export function DialogHost() {
         <div className="dialog-actions">
           {!req.alertOnly && (
             <button className="secondary-btn" onClick={() => close(false)}>
-              {t('キャンセル')}
+              {req.cancelLabel ?? t('キャンセル')}
             </button>
           )}
           <button

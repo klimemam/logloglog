@@ -40,6 +40,26 @@ export function Sheet({
     }
   }, [render])
 
+  // Escapeで閉じる。開いている間はhistoryを1つ積み、Androidの戻るキーでも
+  // アプリを離脱せずシートだけ閉じるようにする
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    const onPop = () => onClose()
+    document.addEventListener('keydown', onKey)
+    history.pushState({ sheet: true }, '')
+    window.addEventListener('popstate', onPop)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      window.removeEventListener('popstate', onPop)
+      // 自分が積んだ履歴が残っていれば戻しておく(閉じるボタン経由のとき)
+      if (history.state?.sheet) history.back()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+
   const onGrabDown = (e: React.PointerEvent) => {
     drag.current = { startY: e.clientY, dy: 0 }
     ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)

@@ -74,7 +74,7 @@ function Onboarding() {
           <span className="onboard-icon">✏️</span>
           <div>
             <b>{t('開いてすぐ、ワンタップで記録')}</b>
-            <p>{t('ホームの「+」を押すだけ。ランニングや読書など、習慣は自由に追加できます。')}</p>
+            <p>{t('ホームのボタン(+5km など)を押すだけ。ランニングや読書など、習慣は自由に追加できます。')}</p>
           </div>
         </div>
         <div className="onboard-item">
@@ -186,11 +186,26 @@ export default function App() {
       <Onboarding />
       <UpdateBanner />
       <DialogHost />
-      {tab === 'home' && <HomeView onOpenStats={() => setTab('stats')} onOpenHabits={() => setTab('habits')} />}
+      {tab === 'home' && (
+        <HomeView
+          onOpenStats={(anchor) => {
+            setTab('stats')
+            // 「詳しく」から来たときは該当セクションまで送る(先頭に飛ぶだけでは押した意味がない)
+            if (anchor) {
+              requestAnimationFrame(() =>
+                requestAnimationFrame(() =>
+                  document.getElementById(anchor)?.scrollIntoView({ block: 'start' }),
+                ),
+              )
+            }
+          }}
+          onOpenHabits={() => setTab('habits')}
+        />
+      )}
       {tab === 'stats' && <StatsView />}
       {tab === 'habits' && <HabitsView />}
       {tab === 'settings' && <SettingsView />}
-      <nav className="tabbar" aria-label="メインナビゲーション">
+      <nav className="tabbar" aria-label={t('メインナビゲーション')}>
         {tabs.map((t) => (
           <button
             key={t.id}

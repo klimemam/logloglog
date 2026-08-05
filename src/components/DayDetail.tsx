@@ -1,6 +1,6 @@
 import { useStore } from '../store'
 import { formatDateLong } from '../lib/dates'
-import { t, tName } from '../lib/i18n'
+import { t, tName, tUnit } from '../lib/i18n'
 import { Sheet } from './Sheet'
 import { seriesVar } from './HomeView'
 import { ExerciseTile } from './exercise-icons'
@@ -46,7 +46,7 @@ export function DayDetailSheet({ date, onClose }: { date: string | null; onClose
                     {e.setsDetail?.length
                       ? ` ・ ${e.setsDetail.map((s) => `${s.weight != null ? `${s.weight}kg×` : ''}${s.reps}`).join(' / ')}`
                       : e.value != null
-                        ? ` ・ ${e.value}${h.unit}`
+                        ? ` ・ ${e.value}${tUnit(h.unit)}`
                         : ''}
                     {e.note ? ` ・ ${e.note}` : ''}
                   </small>

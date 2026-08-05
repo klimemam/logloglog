@@ -70,6 +70,21 @@ export const tName = (name: string): string => {
   return canonical ? t(canonical) : name
 }
 
+/** 単位の表示用変換。プリセット由来の単位(どの言語で保存されていても)は表示言語に訳す */
+const UNIT_KEYS = ['セット', '分', '時間', 'ページ', '秒', '回']
+let unitReverse: Map<string, string> | null = null
+
+export const tUnit = (unit: string): string => {
+  if (!unit) return unit
+  if (UNIT_KEYS.includes(unit)) return t(unit)
+  if (!unitReverse) {
+    unitReverse = new Map()
+    for (const key of UNIT_KEYS) for (const v of D[key] ?? []) unitReverse.set(v, key)
+  }
+  const canonical = unitReverse.get(unit)
+  return canonical ? t(canonical) : unit
+}
+
 const D: Record<string, [string, string, string, string]> = {
   /* ===== タブ・共通 ===== */
   '記録': ['Log', '记录', 'Registro', 'تسجيل'],
@@ -86,7 +101,7 @@ const D: Record<string, [string, string, string, string]> = {
   /* ===== オンボーディング ===== */
   'ようこそ 👋': ['Welcome 👋', '欢迎 👋', 'Bienvenido 👋', 'مرحبًا 👋'],
   '開いてすぐ、ワンタップで記録': ['Log in one tap, right away', '打开即可一键记录', 'Registra con un toque', 'سجّل بلمسة واحدة فور الفتح'],
-  'ホームの「+」を押すだけ。ランニングや読書など、習慣は自由に追加できます。': ['Just tap “+” on Home. Add any habit — running, reading, anything.', '只需点击首页的“+”。跑步、读书等习惯都能自由添加。', 'Solo toca «+» en inicio. Añade cualquier hábito: correr, leer, etc.', 'اضغط «+» في الرئيسية فقط. أضف أي عادة: الجري، القراءة وغيرها.'],
+  'ホームのボタン(+5km など)を押すだけ。ランニングや読書など、習慣は自由に追加できます。': ['Just tap the button on Home (e.g. +5km). Add any habit — running, reading, anything.', '只需点击首页的按钮(如 +5km)。跑步、读书等习惯都能自由添加。', 'Solo toca el botón en inicio (p. ej. +5km). Añade cualquier hábito: correr, leer, etc.', 'اضغط الزر في الرئيسية (مثل +5km). أضف أي عادة: الجري، القراءة وغيرها.'],
   '筋トレはワークアウトモード': ['Workout mode for strength training', '力量训练有专属训练模式', 'Modo entrenamiento para fuerza', 'وضع التمرين لتدريب القوة'],
   '種目を選ぶと前回のセットが入った状態でスタート。✓するだけで休憩タイマーも動きます。': ['Pick an exercise and start with last time’s sets pre-filled. Check ✓ and the rest timer starts.', '选择动作后自动填入上次的组数。打✓即启动休息计时。', 'Elige un ejercicio y empieza con las series de la última vez. Marca ✓ y corre el descanso.', 'اختر تمرينًا وابدأ بمجموعات المرة السابقة. علّم ✓ ليبدأ مؤقّت الراحة.'],
   '続けるほど、成長が見える': ['See your growth as you keep going', '坚持越久,成长越清晰', 'Ve tu progreso al ser constante', 'شاهد تقدمك مع الاستمرار'],
@@ -227,7 +242,7 @@ const D: Record<string, [string, string, string, string]> = {
   '週の総セット数。レベルが上がっているかは種目別の成長も確認': ['Total sets per week. Also check progress by exercise', '每周总组数。也可查看按动作的成长', 'Series totales por semana. Mira también el progreso por ejercicio', 'إجمالي المجموعات أسبوعيًا. راجع أيضًا التقدم حسب التمرين'],
   'レベルが上がっているかは、この線の傾きで確認': ['Improving = this line going up', '线越高代表越进步', 'Mejorar = esta línea sube', 'التحسن يعني صعود هذا الخط'],
   'デイリーサマリー': ['Daily summary', '每日总览', 'Resumen diario', 'الملخص اليومي'],
-  '全習慣 × 日(直近4週)。濃さ = その日の量(各習慣の最大値比)。睡眠や仕事と並べると、習慣の維持に何が効いているかが見えてくる': ['All habits × days (last 4 weeks). Darker = more that day. Compare with sleep or work to see what keeps you consistent', '全部习惯 × 日(近4周)。颜色越深当天做得越多。与睡眠、工作对照可发现坚持的关键', 'Hábitos × días (4 semanas). Más oscuro = más ese día. Compara con sueño o trabajo', 'العادات × الأيام (4 أسابيع). الأغمق = أكثر. قارن مع النوم أو العمل'],
+  '全習慣 × 日(直近4週)。濃さ = その日の量(各習慣の中での相対値)。睡眠や仕事と並べると、習慣の維持と何が一緒に動いているかが見えてくる': ['All habits × days (last 4 weeks). Darker = more that day, relative to that habit. Compare with sleep or work to see what moves together', '全部习惯 × 日(近4周)。颜色越深表示当天相对更多。与睡眠、工作对照可看出同步变化', 'Hábitos × días (4 semanas). Más oscuro = más ese día. Compara con sueño o trabajo', 'العادات × الأيام (4 أسابيع). الأغمق = أكثر. قارن مع النوم أو العمل'],
   '気づき': ['Insights', '洞察', 'Hallazgos', 'ملاحظات'],
   '直近8週の記録から。相関であって因果ではない点に注意(参考)': ['From the last 8 weeks. Correlation, not causation (for reference)', '基于近8周记录。仅为相关而非因果(供参考)', 'De las últimas 8 semanas. Correlación, no causalidad', 'من آخر 8 أسابيع. ارتباط لا سببية (للاسترشاد)'],
   '{a}をやった日は、{b}が多い:': ['On days you did {a}, {b} was higher:', '做了{a}的日子,{b}更多:', 'Los días con {a}, {b} fue mayor:', 'في أيام {a}، كان {b} أعلى:'],
@@ -394,5 +409,46 @@ const D: Record<string, [string, string, string, string]> = {
   '分': ['min', '分钟', 'min', 'د'],
   '時間': ['h', '小时', 'h', 'س'],
   'ページ': ['pg', '页', 'pág', 'صفحة'],
+  '{name}のやってしまったを記録しました': ['Logged a slip for {name}', '已记录{name}的破戒', 'Recaída registrada en {name}', 'تم تسجيل زلل في {name}'],
+  '「{name}」を{d}にやってしまった記録をつけますか?': ['Log a slip for "{name}" on {d}?', '要记录「{name}」在{d}破戒吗?', '¿Registrar una recaída de "{name}" el {d}?', 'هل تسجّل زللًا في "{name}" بتاريخ {d}؟'],
+  '「{name}」を今日やってしまった記録をつけますか?': ['Log a slip for "{name}" today?', '要记录今天「{name}」破戒吗?', '¿Registrar una recaída de "{name}" hoy?', 'هل تسجّل زللًا في "{name}" اليوم؟'],
+  '日付': ['Date', '日期', 'Fecha', 'التاريخ'],
+  '{d}の記録': ['Records for {d}', '{d}的记录', 'Registros del {d}', 'سجلات {d}'],
+  '✓していないセットが{n}個あります。これも記録しますか?': ['{n} set(s) are not checked off. Record them too?', '有{n}组未打勾,也要记录吗?', 'Hay {n} series sin marcar. ¿Registrarlas también?', 'هناك {n} مجموعة غير مؤكدة. هل تسجّلها أيضًا؟'],
+  '✓した分だけ': ['Only checked ones', '仅已打勾的', 'Solo las marcadas', 'المؤكدة فقط'],
+  '{a}を続けられた日は、{b}が多い:': ['On days you kept up {a}, {b} was higher:', '坚持{a}的日子,{b}更多:', 'Los días que mantuviste {a}, {b} fue mayor:', 'في أيام مواصلة {a}، كان {b} أعلى:'],
+  '{a}を続けられた日は、{b}が少ない:': ['On days you kept up {a}, {b} was lower:', '坚持{a}的日子,{b}更少:', 'Los días que mantuviste {a}, {b} fue menor:', 'في أيام مواصلة {a}، كان {b} أقل:'],
+  '今週 {n}/{m}日クリア': ['{n}/{m} clean days this week', '本周{n}/{m}天达成', '{n}/{m} días limpios esta semana', '{n}/{m} يوم نظيف هذا الأسبوع'],
+  '{n}/{m}日クリア': ['{n}/{m} clean', '{n}/{m}天达成', '{n}/{m} limpios', '{n}/{m} نظيف'],
+  '月': ['Mon', '一', 'Lun', 'ن'],
+  '水': ['Wed', '三', 'Mié', 'ر'],
+  '金': ['Fri', '五', 'Vie', 'ج'],
+  'Web版': ['Web', '网页版', 'Web', 'الويب'],
+  'ホームに戻る(セッションは保持)': ['Back to home (session kept)', '返回主页(保留进行中的训练)', 'Volver al inicio (se conserva la sesión)', 'العودة للرئيسية (تبقى الجلسة)'],
+  '重量を減らす': ['Decrease weight', '减少重量', 'Reducir peso', 'إنقاص الوزن'],
+  '重量を増やす': ['Increase weight', '增加重量', 'Aumentar peso', 'زيادة الوزن'],
+  '回数を減らす': ['Decrease reps', '减少次数', 'Reducir repeticiones', 'إنقاص التكرارات'],
+  '回数を増やす': ['Increase reps', '增加次数', 'Aumentar repeticiones', 'زيادة التكرارات'],
+  '{n}セット目を未完了に戻す': ['Mark set {n} as not done', '将第{n}组标记为未完成', 'Marcar la serie {n} como no hecha', 'إلغاء إتمام المجموعة {n}'],
+  '{n}セット目を完了にする': ['Mark set {n} as done', '将第{n}组标记为完成', 'Marcar la serie {n} como hecha', 'إتمام المجموعة {n}'],
+  '週別の記録回数': ['Records per week', '每周记录次数', 'Registros por semana', 'السجلات أسبوعيًا'],
+  '週別の推移': ['Weekly trend', '每周趋势', 'Tendencia semanal', 'الاتجاه الأسبوعي'],
+  '習慣ごとの日別サマリー': ['Daily summary by habit', '按习惯的每日概览', 'Resumen diario por hábito', 'ملخص يومي حسب العادة'],
+  '日別の記録ヒートマップ': ['Daily record heatmap', '每日记录热力图', 'Mapa de calor diario', 'خريطة حرارية يومية'],
+  'メインナビゲーション': ['Main navigation', '主导航', 'Navegación principal', 'التنقل الرئيسي'],
+  '色 {n}': ['Color {n}', '颜色{n}', 'Color {n}', 'لون {n}'],
+  '{v}を記録する': ['Log {v}', '记录{v}', 'Registrar {v}', 'تسجيل {v}'],
+  '次のレベルまで {n} XP': ['{n} XP to next level', '距离下一级还有{n}XP', '{n} XP para el siguiente nivel', '{n} نقطة للمستوى التالي'],
+  '{n}回': ['{n} reps', '{n}次', '{n} reps', '{n} تكرار'],
+  '{n}セット': ['{n} sets', '{n}组', '{n} series', '{n} مجموعة'],
+  '{n}セット(最高{w}kg)': ['{n} sets (max {w}kg)', '{n}组(最高{w}kg)', '{n} series (máx {w}kg)', '{n} مجموعة (أقصى {w}kg)'],
+  'クリアした1日ごとに10XP': ['10 XP per clean day', '每坚持1天+10XP', '10 XP por día limpio', '10 نقاط لكل يوم نظيف'],
+  '1回の記録ごとに10XP': ['10 XP per log', '每记录1次+10XP', '10 XP por registro', '10 نقاط لكل تسجيل'],
+  '「{name}」はすでにあります。もう1つ作りますか?': ['"{name}" already exists. Create another one?', '「{name}」已存在。要再创建一个吗?', '«{name}» ya existe. ¿Crear otro?', '«{name}» موجود بالفعل. هل تنشئ آخر؟'],
+  '作る': ['Create', '创建', 'Crear', 'إنشاء'],
+  '強度': ['Intensity', '强度', 'Intensidad', 'الشدة'],
+  '自己ベスト更新': ['New PR', '刷新纪录', 'Nuevo récord', 'رقم قياسي'],
+  '自己ベスト推定1RMに対する割合': ['% of your best estimated 1RM', '占个人最佳预估1RM的比例', '% de tu mejor 1RM estimado', 'النسبة من أفضل 1RM مقدّر'],
+  '自己ベスト回数に対する割合': ['% of your best reps', '占个人最多次数的比例', '% de tus mejores repeticiones', 'النسبة من أفضل عدد تكرارات'],
   '秒': ['s', '秒', 's', 'ث'],
 }
