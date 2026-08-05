@@ -88,10 +88,11 @@ const ICONS: Record<string, ReactNode> = {
     <>
       <Bench y={32} />
       <Head x={36} y={26} />
-      {/* 左右に離れた2つのダンベル = バーベルとの決定的な違い */}
-      <Dumbbell x={13} y={14} />
-      <Dumbbell x={31} y={14} />
-      <path d="M18 27 L14 20 M28 27 L30 20" />
+      {/* 左右で高さをずらす = 34pxでも「2つに分かれている」と分かる輪郭差。
+          重りの丸/角の違いは実サイズで消えるため高さで勝負する */}
+      <Dumbbell x={12} y={20} />
+      <Dumbbell x={32} y={9} />
+      <path d="M18 27 L14 24 M28 27 L30 13" />
     </>
   ),
   インクラインベンチプレス: (
@@ -106,12 +107,12 @@ const ICONS: Record<string, ReactNode> = {
   ),
   チェストフライ: (
     <>
-      <Bench y={32} />
-      <Head x={36} y={26} />
-      {/* 両側に開いたダンベル + 弧で動きを出す */}
-      <Dumbbell x={10} y={16} s={0.85} />
-      <Dumbbell x={38} y={16} s={0.85} />
-      <path d="M14 22 Q24 12 34 22" strokeDasharray="3 3" />
+      {/* 胸カテゴリの他とシルエット系統を変える: 胸前で閉じるV字(真上から見た腕) */}
+      <Head x={24} y={38} />
+      <path d="M24 33 L10 14 M24 33 L38 14" strokeWidth={4.4} />
+      <Dumbbell x={9} y={11} s={0.9} />
+      <Dumbbell x={39} y={11} s={0.9} />
+      <path d="M15 24 Q24 18 33 24" />
     </>
   ),
   腕立て伏せ: (
@@ -166,12 +167,11 @@ const ICONS: Record<string, ReactNode> = {
   シーテッドロー: (
     <>
       <Floor />
-      {/* 座面 + 水平のケーブル */}
-      <path d="M8 34 H22" strokeWidth={6} strokeLinecap="butt" />
-      <Head x={16} y={20} />
-      <path d="M16 24 V32 M18 27 H32" />
-      <Cable x={36} y1={20} y2={34} />
-      <path d="M32 22 V32" strokeWidth={5} />
+      {/* 座位 + 長い水平の引き線 + 奥の縦板(マシン)。破線は実サイズで消えるので実線に */}
+      <path d="M6 34 H20" strokeWidth={6} strokeLinecap="butt" />
+      <Head x={13} y={20} />
+      <path d="M13 24 V32 M15 27 H38" strokeWidth={4.4} />
+      <path d="M41 14 V38" strokeWidth={6} strokeLinecap="butt" />
     </>
   ),
 
@@ -187,11 +187,12 @@ const ICONS: Record<string, ReactNode> = {
   ),
   レッグプレス: (
     <>
-      {/* 大きな板(スレッド)を斜めに押す */}
-      <path d="M26 6 L44 24" strokeWidth={7} strokeLinecap="butt" />
-      <Head x={10} y={34} />
-      <path d="M10 38 H18" strokeWidth={5} />
-      <path d="M15 34 L24 26 L32 18" />
+      {/* 斜面(スレッド)+ 足裏の直交線 + 背もたれ板。斜面だけだと矢印に見えていた */}
+      <path d="M28 8 L44 24" strokeWidth={7} strokeLinecap="butt" />
+      <path d="M6 26 L14 40" strokeWidth={6} strokeLinecap="butt" />
+      <Head x={12} y={20} />
+      <path d="M13 24 L22 30 L33 19" strokeWidth={4.4} />
+      <path d="M30 22 L37 15" strokeWidth={5} />
     </>
   ),
   ブルガリアンスクワット: (
@@ -213,12 +214,13 @@ const ICONS: Record<string, ReactNode> = {
   ),
   レッグカール: (
     <>
-      {/* うつ伏せの台 + 踵を巻き上げる大きな弧 */}
-      <path d="M6 30 H28" strokeWidth={6} strokeLinecap="butt" />
-      <path d="M10 33 V40 M25 33 V40" />
-      <Head x={7} y={24} />
-      <path d="M11 25 H27 Q38 25 38 12" />
-      <circle cx={38} cy={10} r={4} fill="currentColor" stroke="none" />
+      {/* 床線 + 水平な胴 + 直角に立ち上がる脛 の3要素だけ。
+          前脚を描くと四足動物に見えていた */}
+      <path d="M6 40 H42" strokeWidth={6} strokeLinecap="butt" />
+      <Head x={11} y={31} />
+      <path d="M15 32 H30" strokeWidth={5} />
+      <path d="M30 32 V12" strokeWidth={5} />
+      <path d="M25 12 H36" strokeWidth={5} />
     </>
   ),
   カーフレイズ: (
@@ -253,22 +255,22 @@ const ICONS: Record<string, ReactNode> = {
   ),
   リアレイズ: (
     <>
-      <Floor />
-      {/* 前傾姿勢(胴が水平)+ 真横のダンベル */}
-      <Head x={38} y={20} />
-      <path d="M35 22 L20 28 M20 28 V42" />
-      <path d="M28 25 H14 M28 25 L34 32" />
-      <Dumbbell x={11} y={25} s={0.8} />
-      <Dumbbell x={36} y={33} s={0.8} />
+      {/* サイドレイズが「―」ならリアレイズは「\ /」。腕の角度だけで勝負する */}
+      <Head x={24} y={12} />
+      <path d="M24 16 V32 M24 32 L19 43 M24 32 L29 43" />
+      <path d="M24 20 L11 30 M24 20 L37 30" strokeWidth={4.4} />
+      <Dumbbell x={8} y={33} s={0.8} />
+      <Dumbbell x={40} y={33} s={0.8} />
     </>
   ),
   アップライトロー: (
     <>
-      <Head x={24} y={9} />
-      <path d="M24 13 V32 M24 32 L19 43 M24 32 L29 43" />
-      {/* 顎の高さのバーベル + 張り出した肘 */}
-      <Barbell y={22} x1={9} x2={39} r={5} />
-      <path d="M24 17 L17 19 M24 17 L31 19" />
+      <Head x={24} y={11} />
+      <path d="M24 15 V33 M24 33 L19 43 M24 33 L29 43" />
+      {/* 体の中心の短い横棒 + 肩より上に跳ね上げた肘。
+          サイドレイズ(長い水平な腕)と輪郭で区別する */}
+      <path d="M24 19 L13 12 M24 19 L35 12" strokeWidth={4.4} />
+      <Barbell y={23} x1={15} x2={33} r={4} />
     </>
   ),
 
@@ -284,11 +286,13 @@ const ICONS: Record<string, ReactNode> = {
   ),
   ハンマーカール: (
     <>
-      <Head x={17} y={10} />
-      <path d="M17 14 V32 M17 32 L13 43 M17 32 L22 43" />
-      <path d="M17 18 V26 L27 21" />
-      {/* 縦持ちのダンベル = アームカールとの決定的な違い */}
-      <Dumbbell x={33} y={20} vertical />
+      {/* アームカールは片腕、ハンマーは両腕。持ち向きの差は実サイズで消えるため
+          要素数(腕の本数)で輪郭を変える */}
+      <Head x={24} y={10} />
+      <path d="M24 14 V32 M24 32 L20 43 M24 32 L28 43" />
+      <path d="M24 18 V26 L14 21 M24 18 V26 L34 21" />
+      <Dumbbell x={9} y={20} vertical s={0.85} />
+      <Dumbbell x={39} y={20} vertical s={0.85} />
     </>
   ),
   トライセプスエクステンション: (
@@ -334,10 +338,10 @@ const ICONS: Record<string, ReactNode> = {
   レッグレイズ: (
     <>
       <Floor />
-      {/* 胴は床、脚だけ垂直に上げる */}
-      <path d="M10 41 H26" strokeWidth={5} />
-      <path d="M26 41 L26 16" strokeWidth={5} />
-      <Head x={7} y={38} r={3.5} />
+      {/* 胴は床、脚はV字に開いて上へ。倒れたTだと何を表すか読めなかった */}
+      <path d="M9 40 H26" strokeWidth={5} />
+      <path d="M26 40 L20 14 M26 40 L34 16" strokeWidth={5} />
+      <Head x={6} y={36} r={3.5} />
     </>
   ),
   アブローラー: (
