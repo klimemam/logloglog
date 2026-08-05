@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store'
 import type { Habit } from '../types'
-import { formatDateLong, todayKey } from '../lib/dates'
+import { formatDateLong, formatDateShort, todayKey } from '../lib/dates'
 import { aggregateByDay, currentStreak, dailyHabitMatrix, quitStats, thisWeekProgress } from '../lib/stats'
 import { Sheet } from './Sheet'
 import { Header } from './Header'
@@ -265,7 +265,7 @@ function HabitCard({
               {/* その日の記録を一覧+個別削除。トーストが消えた後でも消せるようにする */}
               <div className="sheet-records">
                 <div className="sheet-records-head">
-                  {date === today ? t('今日の記録') : t('{d}の記録', { d: date })}
+                  {date === today ? t('今日の記録') : t('{d}の記録', { d: formatDateShort(date) })}
                 </div>
                 {dateEntries.length === 0 ? (
                   <p className="empty-note" style={{ padding: '12px 0' }}>{t('記録なし')}</p>

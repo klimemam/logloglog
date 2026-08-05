@@ -283,10 +283,6 @@ export function WorkoutMode({
       ? null
       : Math.max(0, Math.ceil((session.restEndsAt - Date.now()) / 1000))
 
-  const startRest = () => {
-    buzzedRef.current = false
-    update((s) => ({ ...s, restEndsAt: Date.now() + restDuration * 1000 }))
-  }
   const clearRest = () => update((s) => ({ ...s, restEndsAt: undefined }))
 
   // 0到達で1度だけ振動し、しばらく「休憩終了」を出してから畳む
@@ -327,8 +323,20 @@ export function WorkoutMode({
 
   const toggleDone = (ei: number, ri: number) => {
     const wasDone = session.exercises[ei].rows[ri].done
-    setRow(ei, ri, { done: !wasDone })
-    if (!wasDone) startRest() // セット完了 → 自動で休憩開始
+    // 「✓を付ける」と「休憩を開始する」は必ず1回の更新にまとめる。
+    // update() は毎回propsのsessionから計算するため、続けて2回呼ぶと
+    // 後の呼び出しが前の変更を捨ててしまう(✓が付かない不具合の原因だった)
+    if (!wasDone) buzzedRef.current = false
+    update((s) => ({
+      ...s,
+      exercises: s.exercises.map((ex, i) =>
+        i === ei
+          ? { ...ex, rows: ex.rows.map((r, j) => (j === ri ? { ...r, done: !wasDone } : r)) }
+          : ex,
+      ),
+      // セット完了 → 自動で休憩開始
+      restEndsAt: wasDone ? s.restEndsAt : Date.now() + restDuration * 1000,
+    }))
   }
 
   // ✓していなくても回数が入っていれば「記録できる中身がある」とみなす。

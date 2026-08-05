@@ -1864,3 +1864,20 @@ textarea.transfer-code:focus {
   color: var(--text-muted);
   margin-top: 1px;
 }
+
+/* 「1/7日クリア」が390pxで途中改行して読めなくなるのを防ぐ */
+.week-dots {
+  white-space: nowrap;
+}
+
+/* 320pxで「削除」だけ次の行へ落ちて、どの習慣のものか分からなくなっていた */
+.habit-row .text-btn {
+  flex-shrink: 0;
+}
+
+/* 横スクロールするヒートマップは端で文字が切れる。
+   端をフェードさせて「切れている」ではなく「続いている」と読ませる */
+.matrix > div[style*='overflow'] {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+}

@@ -138,7 +138,7 @@ function HabitForm({
               min={1}
               max={14}
               value={form.weeklyTarget}
-              onChange={(e) => set('weeklyTarget', Math.max(1, Number(e.target.value) || 1))}
+              onChange={(e) => set('weeklyTarget', Math.min(14, Math.max(1, Number(e.target.value) || 1)))}
             />
           </label>
         )}
@@ -190,7 +190,7 @@ export function HabitsView() {
       kind: (isStrength ? 'strength' : isQuit ? 'quit' : 'simple') as Habit['kind'],
       metric: (isStrength ? 'reps' : isQuit ? 'none' : f.metric) as MetricType,
       unit: isStrength ? t('セット') : isQuit || f.metric === 'none' ? '' : f.unit,
-      weeklyTarget: isQuit ? 7 : f.weeklyTarget,
+      weeklyTarget: isQuit ? 7 : Math.min(14, Math.max(1, f.weeklyTarget || 1)),
       defaultValue:
         isStrength || isQuit || f.metric === 'none' ? undefined : Number(f.defaultValue) || undefined,
       lowerIsBetter:

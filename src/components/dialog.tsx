@@ -46,6 +46,20 @@ export function DialogHost() {
   }, [])
 
   const req = current
+  // シートはEscapeで閉じるのにダイアログだけ閉じないのは非一貫だった
+  useEffect(() => {
+    if (!req) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        current = null
+        force((n) => n + 1)
+        req.resolve(false)
+      }
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [req])
+
   if (!req) return null
   const close = (ok: boolean) => {
     current = null
