@@ -19,9 +19,9 @@
     <link rel="icon" href="./icons/icon-192.png" />
     <link rel="apple-touch-icon" href="./icons/icon-192.png" />
     <title>LogLogLog — 習慣ログ</title>
-    <script type="module" crossorigin src="./assets/main-DHJg7gih.js"></script>
+    <script type="module" crossorigin src="./assets/main-DK3sdjzm.js"></script>
     <link rel="modulepreload" crossorigin href="./assets/modulepreload-polyfill-B5Qt9EMX.js">
-    <link rel="stylesheet" crossorigin href="./assets/main-D3QnyO4u.css">
+    <link rel="stylesheet" crossorigin href="./assets/main-1eclcrbh.css">
   </head>
   <body>
     <div id="root"></div>
@@ -29,6 +29,26 @@
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('./sw.js').catch(() => {})
+          // 初回訪問時、Service Workerが制御を持つ前に読み込まれたファイルは
+          // キャッシュされず「インストール直後に圏外だと開けない」状態になっていた。
+          // 実際に読み込んだリソースをこちらから登録しておく
+          if ('caches' in window) {
+            var urls = ['./', './index.html', './manifest.webmanifest']
+            try {
+              performance.getEntriesByType('resource').forEach(function (e) {
+                if (e.name.indexOf(location.origin) === 0 && !/update-check=/.test(e.name)) {
+                  urls.push(e.name)
+                }
+              })
+            } catch (_) {}
+            caches.open('logloglog-v1').then(function (c) {
+              urls.forEach(function (u) {
+                c.match(u).then(function (hit) {
+                  if (!hit) c.add(u).catch(function () {})
+                })
+              })
+            })
+          }
         })
       }
     </script>
