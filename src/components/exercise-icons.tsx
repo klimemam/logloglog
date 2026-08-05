@@ -167,11 +167,16 @@ const ICONS: Record<string, ReactNode> = {
   ),
   シーテッドロー: (
     <>
-      {/* 端いっぱいの太い柱(マシン)+ 座って手前に引く人。頭を大きくして器具に埋没させない */}
-      <path d="M42 8 V40" strokeWidth={7} strokeLinecap="butt" />
-      <Head x={12} y={17} r={5} />
-      <path d="M12 22 V32 M8 34 H22" strokeWidth={5} />
-      <path d="M14 25 H39" strokeWidth={5} />
+      {/* 3周直しても「H」の記号から動かなかったため設計を変えた。
+          原因は人と柱が同じ太さの縦線として並ぶこと。柱(マシン)を描くのをやめ、
+          「横に引く」動作そのもの — 肘を体の後ろまで引いた側面姿勢 — で表す
+          (ラットプルダウン=縦に引く との対比) */}
+      <path d="M6 40 H30" strokeWidth={6} strokeLinecap="butt" />
+      <Head x={14} y={16} r={5} />
+      <path d="M14 21 V31 M14 31 H32" strokeWidth={5} />
+      {/* 前方の手 → 後方へ大きく引いた肘 */}
+      <path d="M40 24 H22 L15 18" strokeWidth={5} />
+      <circle cx={42} cy={24} r={3.4} fill="currentColor" stroke="none" />
     </>
   ),
 
