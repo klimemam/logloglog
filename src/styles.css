@@ -660,9 +660,15 @@ select:focus {
 }
 
 /* デイリーサマリー: 固定ラベル列 + スクロールするセル */
+/* 上段=ラベル列+スクロールするヒートマップ、下段=凡例 */
 .matrix {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto 1fr;
   gap: 8px;
+}
+
+.matrix-legend {
+  grid-column: 1 / -1;
 }
 
 .matrix-labels {
@@ -673,6 +679,14 @@ select:focus {
   font-weight: 600;
   color: var(--text-secondary);
   white-space: nowrap;
+  /* 文字数で切らずCSSで省略する(英語で `Streng` と切れて意味が消えていた) */
+  max-width: 33vw;
+}
+
+.matrix-labels span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-inline-end: 6px;
 }
 
 /* ホーム冒頭のデイリーサマリー */
@@ -1547,6 +1561,13 @@ textarea.transfer-code:focus {
   vertical-align: -0.15em;
 }
 
+/* 「詳しく記録する」は実数値入力の主要導線なので、薄いグレーから
+   押せると分かる配色に上げる(隣の大きなピルに埋もれていた) */
+.detail-toggle {
+  color: var(--accent);
+  font-size: 13px;
+}
+
 /* ⑧ カード全面タップ。
    注意: :activeにtransform/filterを使うと、カード内に描画される
    position:fixedのシートオーバーレイの包含ブロックが変わって壊れるため、背景色で押下を表す */
@@ -1732,4 +1753,131 @@ textarea.transfer-code:focus {
   .picker-tile.exercise-pict svg {
     color: color-mix(in srgb, currentColor 70%, #fff);
   }
+}
+
+/* 「スキップ」は汗ばんだ指でも押せるよう当たり判定を広げる(51x17pxしかなかった) */
+.rest-skip {
+  padding: 8px 12px;
+  margin: -8px -4px;
+  min-height: 36px;
+}
+
+/* 詳細シート内のその日の記録一覧(トーストが消えた後の取り消し手段) */
+.sheet-records {
+  border-top: 1px solid var(--gridline);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+.sheet-records-head {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.sheet-record-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  padding: 7px 0;
+}
+
+.sheet-record-row + .sheet-record-row {
+  border-top: 1px solid var(--gridline);
+}
+
+.sheet-record-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* デイリーサマリーの凡例。濃さの意味とやめる習慣の例外を明示する
+   (すぐ下の記録カレンダーには凡例があるのに、ここには何もなかった) */
+.matrix-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-top: 8px;
+}
+
+.matrix-legend .swatch {
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  display: inline-block;
+}
+
+.matrix-legend .sep {
+  margin-inline-start: 6px;
+}
+
+/* ===== 長い習慣名・狭い画面での崩れ対策 ===== */
+
+/* 100文字の習慣名がボタンの下に潜り、カード枠外へはみ出していた */
+.habit-name {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.habit-sub > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 習慣リスト: 320px でメタ文と編集/削除ボタンが重なっていた */
+.habit-row {
+  flex-wrap: wrap;
+}
+
+.habit-row .grow {
+  min-width: 0;
+  flex: 1 1 60%;
+  overflow-wrap: anywhere;
+}
+
+.entry-row > span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/* 強度バッジ: 極端な重量で 852514% になり枠外へ出ていた */
+.intensity {
+  max-width: 6em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: bottom;
+}
+
+/* セット表ヘッダの「強度」注記(%の意味が画面上に無かった) */
+.set-head-note {
+  display: block;
+  font-size: 9px;
+  font-weight: 600;
+  color: var(--text-muted);
+  margin-top: 1px;
+}
+
+/* 「1/7日クリア」が390pxで途中改行して読めなくなるのを防ぐ */
+.week-dots {
+  white-space: nowrap;
+}
+
+/* 320pxで「削除」だけ次の行へ落ちて、どの習慣のものか分からなくなっていた */
+.habit-row .text-btn {
+  flex-shrink: 0;
+}
+
+/* 横スクロールするヒートマップは端で文字が切れる。
+   端をフェードさせて「切れている」ではなく「続いている」と読ませる */
+.matrix > div[style*='overflow'] {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
 }

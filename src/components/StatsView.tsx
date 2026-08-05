@@ -21,7 +21,7 @@ import {
 } from '../lib/stats'
 import { WeeklyBarChart, TrendLineChart, CalendarHeatmap, DailyMatrix } from './charts'
 import { seriesVar } from './HomeView'
-import { t, tName } from '../lib/i18n'
+import { t, tName, tUnit } from '../lib/i18n'
 import { Header } from './Header'
 import { DayDetailSheet } from './DayDetail'
 
@@ -142,7 +142,12 @@ function ExerciseProgress({ entries, color }: { entries: Entry[]; color: string 
 export function StatsView() {
   const { data } = useStore()
   const habits = data.habits.filter((h) => !h.archived)
-  const [selectedId, setSelectedId] = useState<string | null>(habits[0]?.id ?? null)
+  // 記録がある習慣を初期選択にする。先頭固定だと未記録の習慣が選ばれ、
+  // 全部ゼロの画面になって「記録が消えた」と誤解させていた
+  const [selectedId, setSelectedId] = useState<string | null>(() => {
+    const logged = new Set(data.entries.map((e) => e.habitId))
+    return (habits.find((h) => logged.has(h.id)) ?? habits[0])?.id ?? null
+  })
   const [range, setRange] = useState(12)
   const [detailDay, setDetailDay] = useState<string | null>(null)
   const habit = habits.find((h) => h.id === selectedId) ?? habits[0]
@@ -169,7 +174,13 @@ export function StatsView() {
   const { level, intoLevel, needed } = levelFromXp(xpForEntries(qs ? qs.cleanDays : habitEntries.length))
   const trend = (habit.lowerIsBetter ? trendTextTime : trendText)[loadTrend(data.entries, habit)]
   const weeksN = weeklySeries(habitEntries, range)
-  const allDays = dailySeries(data.entries, 15 * 7)
+  // 記録カレンダーは「活動量」のヒートマップ。やめる習慣のエントリはスリップ(失敗)なので、
+  // 混ぜると失敗した日ほど濃く光ってしまう。除外する
+  const quitIds = new Set(habits.filter((h) => h.kind === 'quit').map((h) => h.id))
+  const allDays = dailySeries(
+    data.entries.filter((e) => !quitIds.has(e.habitId)),
+    15 * 7,
+  )
   const color = seriesVar(habit.colorSlot)
   const matrix = dailyHabitMatrix(habits, data.entries, 28)
   const insights = habitInsights(habits, data.entries, 56)
@@ -258,13 +269,15 @@ export function StatsView() {
           <div className="stat-tile">
             <div className="label">{t('レベル')}</div>
             <div className="value">Lv.{level}</div>
-            <div className="level-bar" aria-label={`次のレベルまで ${needed - intoLevel} XP`}>
+            <div className="level-bar" aria-label={t('次のレベルまで {n} XP', { n: needed - intoLevel })}>
               <div className="fill" style={{ width: `${(intoLevel / needed) * 100}%` }} />
             </div>
             <div className="delta">
               {qs
                 ? t('あと{n}XP({m}日)', { n: needed - intoLevel, m: Math.ceil((needed - intoLevel) / 10) })
                 : t('あと{n}XP({m}回)', { n: needed - intoLevel, m: Math.ceil((needed - intoLevel) / 10) })}
+              <br />
+              <small>{qs ? t('クリアした1日ごとに10XP') : t('1回の記録ごとに10XP')}</small>
             </div>
           </div>
           {qs ? (
@@ -314,11 +327,11 @@ export function StatsView() {
 
         {habit.metric !== 'none' && habit.lowerIsBetter && (
           <div className="card chart-card">
-            <h3>{t('週のベストタイム({u})', { u: habit.unit })}</h3>
+            <h3>{t('週のベストタイム({u})', { u: tUnit(habit.unit) })}</h3>
             <p className="subtitle">{t('レベルが上がっているかは、この線が下がっているかで確認')}</p>
             <TrendLineChart
               points={weeklyBestSeries(habitEntries, range)}
-              unit={habit.unit}
+              unit={tUnit(habit.unit)}
               color={color}
             />
           </div>
@@ -326,7 +339,7 @@ export function StatsView() {
 
         {habit.metric !== 'none' && !habit.lowerIsBetter && (
           <div className="card chart-card">
-            <h3>{t('週別ボリューム({u})', { u: habit.unit })}</h3>
+            <h3>{t('週別ボリューム({u})', { u: tUnit(habit.unit) })}</h3>
             <p className="subtitle">
               {isStrength
                 ? t('週の総セット数。レベルが上がっているかは種目別の成長も確認')
@@ -334,21 +347,21 @@ export function StatsView() {
             </p>
             <TrendLineChart
               points={weeksN.map((w) => ({ weekStart: w.weekStart, value: w.value }))}
-              unit={habit.unit}
+              unit={tUnit(habit.unit)}
               color={color}
             />
           </div>
         )}
 
-        <div className="card chart-card">
+        <div className="card chart-card" id="daily-summary">
           <h3>{t('デイリーサマリー')}</h3>
           <p className="subtitle">
-{t('全習慣 × 日(直近4週)。濃さ = その日の量(各習慣の最大値比)。睡眠や仕事と並べると、習慣の維持に何が効いているかが見えてくる')}
+{t('全習慣 × 日(直近4週)。濃さ = その日の量(各習慣の中での相対値)。睡眠や仕事と並べると、習慣の維持と何が一緒に動いているかが見えてくる')}
           </p>
           <DailyMatrix
             rows={matrix.rows}
             days={matrix.days}
-            unitOf={(row) => (row.habit.metric === 'none' ? t('回') : row.habit.unit || '')}
+            unitOf={(row) => (row.habit.metric === 'none' ? t('回') : tUnit(row.habit.unit) || '')}
             onDayTap={setDetailDay}
           />
         </div>
@@ -365,10 +378,21 @@ export function StatsView() {
                 return (
                   <div key={i} className="insight-row">
                     💡{' '}
-                    {t(more ? '{a}をやった日は、{b}が多い:' : '{a}をやった日は、{b}が少ない:', {
-                      a: `${ins.aHabit.emoji} ${tName(ins.aHabit.name)}`,
-                      b: `${ins.bHabit.emoji} ${tName(ins.bHabit.name)}`,
-                    })}{' '}
+                    {/* やめる習慣は values>0 が「クリアした日」を指す。
+                        「禁煙をやった日」だと吸った日と真逆に読めるため主語を変える */}
+                    {t(
+                      ins.aHabit.kind === 'quit'
+                        ? more
+                          ? '{a}を続けられた日は、{b}が多い:'
+                          : '{a}を続けられた日は、{b}が少ない:'
+                        : more
+                          ? '{a}をやった日は、{b}が多い:'
+                          : '{a}をやった日は、{b}が少ない:',
+                      {
+                        a: `${ins.aHabit.emoji} ${tName(ins.aHabit.name)}`,
+                        b: `${ins.bHabit.emoji} ${tName(ins.bHabit.name)}`,
+                      },
+                    )}{' '}
                     <span className="insight-nums">
                       {fmt(ins.withAvg)}
                       {unit} <small>vs {fmt(ins.withoutAvg)}{unit}</small>

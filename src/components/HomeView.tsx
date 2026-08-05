@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../store'
 import type { Habit } from '../types'
-import { formatDateLong, todayKey } from '../lib/dates'
+import { formatDateLong, formatDateShort, todayKey } from '../lib/dates'
 import { aggregateByDay, currentStreak, dailyHabitMatrix, quitStats, thisWeekProgress } from '../lib/stats'
 import { Sheet } from './Sheet'
 import { Header } from './Header'
@@ -9,7 +9,7 @@ import { DayDetailSheet } from './DayDetail'
 import { appConfirm } from './dialog'
 import { IconChevronRight, IconPlay } from './icons'
 import { DailyMatrix } from './charts'
-import { t, tName } from '../lib/i18n'
+import { t, tName, tUnit } from '../lib/i18n'
 import {
   ExercisePicker,
   WorkoutMode,
@@ -22,7 +22,18 @@ import type { WorkoutSession } from './Workout'
 export const seriesVar = (slot: number) => `var(--series-${(slot % 8) + 1})`
 
 const metricLabel = (h: Habit, value: number) =>
-  h.metric === 'none' ? '' : `${Number.isInteger(value) ? value : value.toFixed(1)}${h.unit}`
+  h.metric === 'none' ? '' : `${Number.isInteger(value) ? value : value.toFixed(1)}${tUnit(h.unit)}`
+
+/**
+ * 入力値を実用範囲に丸める。
+ * 負の距離や 1e20 のような値がそのまま保存され、表示が崩れていたため。
+ */
+export const MAX_VALUE = 100000
+export const clampValue = (raw: string): number | undefined => {
+  const n = Number(raw)
+  if (!Number.isFinite(n) || n <= 0) return undefined
+  return Math.min(n, MAX_VALUE)
+}
 
 interface ToastState {
   text: string
@@ -45,10 +56,13 @@ function HabitCard({
   const [open, setOpen] = useState(false)
   const [value, setValue] = useState<string>(habit.defaultValue?.toString() ?? '')
   const [note, setNote] = useState('')
+  const [date, setDate] = useState(todayKey())
 
   const entries = data.entries.filter((e) => e.habitId === habit.id)
   const today = todayKey()
   const todayEntries = entries.filter((e) => e.date === today)
+  // 詳細シートで選んでいる日の記録(既定は今日)
+  const dateEntries = entries.filter((e) => e.date === date).sort((a, b) => (a.time < b.time ? -1 : 1))
   const todayValue = todayEntries.reduce((s, e) => s + (e.value ?? 0), 0)
   const isStrength = habit.kind === 'strength'
   const isQuit = habit.kind === 'quit'
@@ -57,22 +71,29 @@ function HabitCard({
   const week = thisWeekProgress(data.entries, habit)
   const todayExercises = new Set(todayEntries.map((e) => e.exercise).filter(Boolean)).size
 
-  const log = (v?: number, n?: string) => {
-    dispatch({ type: 'addEntry', habitId: habit.id, value: v, note: n || undefined })
-    onLogged({ text: t('{name}を記録しました', { name: tName(habit.name) }), undoHabitId: habit.id })
+  const log = (v?: number, n?: string, date?: string) => {
+    dispatch({ type: 'addEntry', habitId: habit.id, value: v, note: n || undefined, date })
+    onLogged({
+      // やめる習慣で「記録しました」と出すと達成したように読めるため文言を分ける
+      text: isQuit
+        ? t('{name}のやってしまったを記録しました', { name: tName(habit.name) })
+        : t('{name}を記録しました', { name: tName(habit.name) }),
+      undoHabitId: habit.id,
+    })
   }
 
-  const logSlip = async (n?: string) => {
-    if (
-      await appConfirm(
-        t('「{name}」を今日やってしまった記録をつけますか?継続{n}日はリセットされます', {
-          name: tName(habit.name),
-          n: streak,
-        }),
-        { danger: true, confirmLabel: t('記録する') },
-      )
-    ) {
-      log(undefined, n)
+  const logSlip = async (n?: string, date?: string) => {
+    const past = date != null && date !== today
+    const message = past
+      ? t('「{name}」を{d}にやってしまった記録をつけますか?', { name: tName(habit.name), d: date })
+      : streak > 0
+        ? t('「{name}」を今日やってしまった記録をつけますか?継続{n}日はリセットされます', {
+            name: tName(habit.name),
+            n: streak,
+          })
+        : t('「{name}」を今日やってしまった記録をつけますか?', { name: tName(habit.name) })
+    if (await appConfirm(message, { danger: true, confirmLabel: t('記録する') })) {
+      log(undefined, n, date)
       return true
     }
     return false
@@ -80,13 +101,10 @@ function HabitCard({
 
   const wash = `color-mix(in srgb, ${seriesVar(habit.colorSlot)} 13%, transparent)`
 
-  // カード全面タップ: やめる習慣は誤タップでスリップが付くと致命的なので、詳細シートを開くだけにする
-  const mainAction = () =>
-    isStrength
-      ? onStrengthTap(habit)
-      : isQuit
-        ? setOpen(true)
-        : log(habit.metric === 'none' ? undefined : habit.defaultValue)
+  // カード全面タップは記録ではなく詳細シートを開く。
+  // 実績テキストや余白を「読むつもりで」押したときに誤記録が発生していたため
+  // (ワンタップ記録は右のピルが担う)
+  const mainAction = () => (isStrength ? onStrengthTap(habit) : setOpen(true))
 
   return (
     <div className="card habit-tappable" onClick={mainAction}>
@@ -101,12 +119,22 @@ function HabitCard({
           </div>
           <div className="habit-sub">
             {/* 目標が多くてもドットが溢れないよう表示は7個まで(数字は正確に出す) */}
-            <span className="week-dots" aria-label={t('今週 {n}/{m}回', { n: week.count, m: week.target })}>
+            {/* やめる習慣の分子は「今週クリアできた日数」で意味が違うので、単位を添えて区別する */}
+            <span
+              className="week-dots"
+              aria-label={
+                isQuit
+                  ? t('今週 {n}/{m}日クリア', { n: week.count, m: week.target })
+                  : t('今週 {n}/{m}回', { n: week.count, m: week.target })
+              }
+            >
               {Array.from({ length: Math.min(7, Math.max(week.target, week.count)) }, (_, i) => (
                 <span key={i} className={`dot${i < week.count ? ' filled' : ''}`} />
               ))}
               <span style={{ marginLeft: 4 }}>
-                {week.count}/{week.target}
+                {isQuit
+                  ? t('{n}/{m}日クリア', { n: week.count, m: week.target })
+                  : `${week.count}/${week.target}`}
               </span>
             </span>
             {activeSession && <span className="in-workout">{t('ワークアウト中')}</span>}
@@ -150,16 +178,16 @@ function HabitCard({
         ) : habit.metric !== 'none' && habit.defaultValue != null ? (
           <button
             className={`log-pill${todayEntries.length > 0 ? ' done' : ''}`}
-            aria-label={`${habit.defaultValue}${habit.unit}を記録する`}
+            aria-label={t('{v}を記録する', { v: `${habit.defaultValue}${tUnit(habit.unit)}` })}
             onClick={(e) => { e.stopPropagation(); log(habit.defaultValue) }}
           >
             +{habit.defaultValue}
-            {habit.unit}
+            {tUnit(habit.unit)}
           </button>
         ) : (
           <button
             className={`log-btn${todayEntries.length > 0 ? ' done' : ''}`}
-            aria-label={`${habit.name}を記録する`}
+            aria-label={t('{v}を記録する', { v: tName(habit.name) })}
             onClick={(e) => { e.stopPropagation(); log(habit.metric === 'none' ? undefined : habit.defaultValue) }}
           >
             {todayEntries.length > 0 ? '✓' : '+'}
@@ -183,13 +211,24 @@ function HabitCard({
                   {streak > 0 && <b> {t('🔥 {n}日継続中', { n: streak })}</b>}
                 </p>
               )}
+              {/* 「昨日の分を今日入れる」ができるよう日付を選べるようにする */}
+              <label>
+                {t('日付')}
+                <input
+                  type="date"
+                  value={date}
+                  max={today}
+                  onChange={(e) => setDate(e.target.value || today)}
+                />
+              </label>
               {habit.metric !== 'none' && !isQuit && (
                 <label>
-                  {t('記録値({unit})', { unit: habit.unit })}
+                  {t('記録値({unit})', { unit: tUnit(habit.unit) })}
                   <input
                     type="number"
                     inputMode="decimal"
-                    placeholder={habit.unit}
+                    min={0}
+                    placeholder={tUnit(habit.unit)}
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                   />
@@ -208,20 +247,50 @@ function HabitCard({
                 className={`primary-btn${isQuit ? ' dialog-danger' : ''}`}
                 onClick={async () => {
                   if (isQuit) {
-                    if (await logSlip(note)) {
+                    if (await logSlip(note, date)) {
                       setNote('')
                       setOpen(false)
                     }
                     return
                   }
-                  const v = habit.metric === 'none' ? undefined : Number(value) || undefined
-                  log(v, note)
+                  const v = habit.metric === 'none' ? undefined : clampValue(value)
+                  log(v, note, date)
                   setNote('')
                   setOpen(false)
                 }}
               >
                 {isQuit ? t('やってしまったを記録') : t('記録する')}
               </button>
+
+              {/* その日の記録を一覧+個別削除。トーストが消えた後でも消せるようにする */}
+              <div className="sheet-records">
+                <div className="sheet-records-head">
+                  {date === today ? t('今日の記録') : t('{d}の記録', { d: formatDateShort(date) })}
+                </div>
+                {dateEntries.length === 0 ? (
+                  <p className="empty-note" style={{ padding: '12px 0' }}>{t('記録なし')}</p>
+                ) : (
+                  dateEntries.map((e) => (
+                    <div key={e.id} className="sheet-record-row">
+                      <span>
+                        {e.time}
+                        {isQuit
+                          ? ` ・ ${t('やってしまった')}`
+                          : e.value != null
+                            ? ` ・ ${metricLabel(habit, e.value)}`
+                            : ''}
+                        {e.note ? ` ・ ${e.note}` : ''}
+                      </span>
+                      <button
+                        className="text-btn danger"
+                        onClick={() => dispatch({ type: 'deleteEntry', entryId: e.id })}
+                      >
+                        {t('削除')}
+                      </button>
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </Sheet>
         </span>
@@ -230,7 +299,7 @@ function HabitCard({
   )
 }
 
-export function HomeView({ onOpenStats, onOpenHabits }: { onOpenStats?: () => void; onOpenHabits?: () => void }) {
+export function HomeView({ onOpenStats, onOpenHabits }: { onOpenStats?: (anchor?: string) => void; onOpenHabits?: () => void }) {
   const { data, dispatch } = useStore()
   const [toast, setToast] = useState<ToastState | null>(null)
   const [session, setSession] = useState<WorkoutSession | null>(loadSession)
@@ -284,13 +353,26 @@ export function HomeView({ onOpenStats, onOpenHabits }: { onOpenStats?: () => vo
     setWorkoutOpen(true)
   }
 
-  const finishWorkout = () => {
+  const finishWorkout = async () => {
     if (!session) return
+    // 入力済みなのに✓していないセットは、これまで警告なく捨てられていた。
+    // まとめて記録するか、捨てるかを選べるようにする
+    const pending = session.exercises.reduce(
+      (n, ex) => n + ex.rows.filter((r) => !r.done && (Number(r.reps) || 0) > 0).length,
+      0,
+    )
+    let includePending = false
+    if (pending > 0) {
+      includePending = await appConfirm(
+        t('✓していないセットが{n}個あります。これも記録しますか?', { n: pending }),
+        { confirmLabel: t('記録する'), cancelLabel: t('✓した分だけ') },
+      )
+    }
     let exCount = 0
     let setCount = 0
     for (const ex of session.exercises) {
       const done = ex.rows
-        .filter((r) => r.done)
+        .filter((r) => r.done || (includePending && (Number(r.reps) || 0) > 0))
         .map((r) => ({ weight: Number(r.weight) || undefined, reps: Number(r.reps) || 0 }))
         .filter((s) => s.reps > 0)
       if (!done.length) continue
@@ -329,7 +411,7 @@ export function HomeView({ onOpenStats, onOpenHabits }: { onOpenStats?: () => vo
             <div className="home-summary-head">
               <h3>{t('デイリーサマリー')}</h3>
               {onOpenStats && (
-                <button className="text-btn" onClick={onOpenStats}>
+                <button className="text-btn" onClick={() => onOpenStats('daily-summary')}>
                   {t('詳しく')} <IconChevronRight size={12} />
                 </button>
               )}
@@ -337,7 +419,7 @@ export function HomeView({ onOpenStats, onOpenHabits }: { onOpenStats?: () => vo
             <DailyMatrix
               rows={matrix.rows}
               days={matrix.days}
-              unitOf={(row) => (row.habit.metric === 'none' ? t('回') : row.habit.unit || '')}
+              unitOf={(row) => (row.habit.metric === 'none' ? t('回') : tUnit(row.habit.unit) || '')}
               onDayTap={setDetailDay}
             />
           </div>

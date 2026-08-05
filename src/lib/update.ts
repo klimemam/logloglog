@@ -53,7 +53,7 @@ const checkWeb = async (): Promise<UpdateResult> => {
   const latestName = m?.[1] ?? ''
   return {
     available: Boolean(latestName && currentName && latestName !== currentName),
-    current: 'Web版',
+    current: t('Web版'),
     latest: latestName, // バナーの「このバージョンは非表示にした」判定に使う
   }
 }

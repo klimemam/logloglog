@@ -60,7 +60,7 @@ export function WeeklyBarChart({
 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      <svg className="chart-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="週別の記録回数">
+      <svg className="chart-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('週別の記録回数')}>
         {ticks.map((t) => (
           <g key={t}>
             <line
@@ -194,7 +194,7 @@ export function TrendLineChart({
 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
-      <svg className="chart-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="週別の推移">
+      <svg className="chart-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t('週別の推移')}>
         {ticks.map((t) => (
           <g key={t}>
             <line
@@ -338,10 +338,16 @@ export function DailyMatrix({
   return (
     <div className="matrix" style={{ position: 'relative' }}>
       {/* 行ラベルは固定列にして、スクロールしても習慣名が見えるようにする */}
+      {/* 6文字での切り捨ては英語・スペイン語で `Streng` `Lectur` になり意味が消えるため、
+          CSSの省略記号に任せる */}
       <div className="matrix-labels" style={{ paddingBottom: 16 }}>
         {rows.map((row) => (
-          <span key={row.habit.id} style={{ height: cell + gap, lineHeight: `${cell}px` }}>
-            {row.habit.emoji} {tName(row.habit.name).slice(0, 6)}
+          <span
+            key={row.habit.id}
+            style={{ height: cell + gap, lineHeight: `${cell}px` }}
+            title={tName(row.habit.name)}
+          >
+            {row.habit.emoji} {tName(row.habit.name)}
           </span>
         ))}
       </div>
@@ -351,7 +357,7 @@ export function DailyMatrix({
           height={height}
           style={{ display: 'block' }}
           role="img"
-          aria-label="習慣ごとの日別サマリー"
+          aria-label={t('習慣ごとの日別サマリー')}
         >
           {rows.map((row, r) => (
             <g key={row.habit.id}>
@@ -384,22 +390,41 @@ export function DailyMatrix({
               })}
             </g>
           ))}
-          {days.map(
-            (day, c) =>
-              (c === days.length - 1 || c % 7 === 0) && (
-                <text
-                  key={day}
-                  x={c * (cell + gap) + cell / 2}
-                  y={height - 3}
-                  textAnchor="middle"
-                  fontSize={9}
-                  fill="var(--text-muted)"
-                >
-                  {formatDateShort(day)}
-                </text>
-              ),
-          )}
+          {days.map((day, c) => {
+            if (c !== days.length - 1 && c % 7 !== 0) return null
+            // 端のラベルは中央揃えだと SVG/スクロール領域の外にはみ出して
+            // 「!2」のように数字が欠けて見えるので、内側に寄せる
+            const isFirst = c === 0
+            const isLast = c === days.length - 1
+            return (
+              <text
+                key={day}
+                x={c * (cell + gap) + (isFirst ? 0 : isLast ? cell : cell / 2)}
+                y={height - 3}
+                textAnchor={isFirst ? 'start' : isLast ? 'end' : 'middle'}
+                fontSize={9}
+                fill="var(--text-muted)"
+              >
+                {formatDateShort(day)}
+              </text>
+            )
+          })}
         </svg>
+      </div>
+      <div className="matrix-legend">
+        <span>{t('少')}</span>
+        {seq.map((c) => (
+          <span key={c} className="swatch" style={{ background: c }} />
+        ))}
+        <span>{t('多')}</span>
+        {rows.some((r) => r.habit.kind === 'quit') && (
+          <span className="sep">
+            ・<span className="swatch" style={{ background: seq[3], marginInline: 4 }} />
+            {t('クリア')}
+            <span className="swatch" style={{ background: 'var(--series-6)', marginInline: 4 }} />
+            {t('やってしまった')}
+          </span>
+        )}
       </div>
       {tip && (
         <div className="chart-tooltip" style={{ left: tip.x, top: tip.y }}>
@@ -423,7 +448,7 @@ export function CalendarHeatmap({ days }: { days: { date: string; count: number 
   const height = 7 * (cell + gap) + 4
   const seq = ['var(--seq-0)', 'var(--seq-1)', 'var(--seq-2)', 'var(--seq-3)', 'var(--seq-4)']
   const colorFor = (c: number) => seq[Math.min(c, seq.length - 1)]
-  const dayLabels = ['月', '', '水', '', '金', '', '']
+  const dayLabels = [t('月'), '', t('水'), '', t('金'), '', '']
 
   return (
     <div ref={wrapRef} style={{ position: 'relative' }}>
@@ -431,7 +456,7 @@ export function CalendarHeatmap({ days }: { days: { date: string; count: number 
         className="chart-svg"
         viewBox={`0 0 ${width} ${height}`}
         role="img"
-        aria-label="日別の記録ヒートマップ"
+        aria-label={t('日別の記録ヒートマップ')}
       >
         {dayLabels.map(
           (l, r) =>
