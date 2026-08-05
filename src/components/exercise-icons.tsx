@@ -158,20 +158,20 @@ const ICONS: Record<string, ReactNode> = {
   ベントオーバーロー: (
     <>
       <Floor />
-      <Head x={36} y={16} />
-      {/* 前傾した胴 + 腹の高さのバーベル */}
-      <path d="M33 19 L18 27 M18 27 V41" />
-      <Barbell y={30} x1={10} x2={34} r={5} />
+      {/* 「く」の字に折れた胴 + 真下に垂れた腕 + 腹の高さのバー */}
+      <Head x={37} y={14} r={5} />
+      <path d="M34 17 L20 24 M20 24 L18 41" strokeWidth={5} />
+      <path d="M26 21 V30" strokeWidth={5} />
+      <Barbell y={32} x1={14} x2={38} r={5} />
     </>
   ),
   シーテッドロー: (
     <>
-      <Floor />
-      {/* 座位 + 長い水平の引き線 + 奥の縦板(マシン)。破線は実サイズで消えるので実線に */}
-      <path d="M6 34 H20" strokeWidth={6} strokeLinecap="butt" />
-      <Head x={13} y={20} />
-      <path d="M13 24 V32 M15 27 H38" strokeWidth={4.4} />
-      <path d="M41 14 V38" strokeWidth={6} strokeLinecap="butt" />
+      {/* 端いっぱいの太い柱(マシン)+ 座って手前に引く人。頭を大きくして器具に埋没させない */}
+      <path d="M42 8 V40" strokeWidth={7} strokeLinecap="butt" />
+      <Head x={12} y={17} r={5} />
+      <path d="M12 22 V32 M8 34 H22" strokeWidth={5} />
+      <path d="M14 25 H39" strokeWidth={5} />
     </>
   ),
 
@@ -187,12 +187,12 @@ const ICONS: Record<string, ReactNode> = {
   ),
   レッグプレス: (
     <>
-      {/* 斜面(スレッド)+ 足裏の直交線 + 背もたれ板。斜面だけだと矢印に見えていた */}
-      <path d="M28 8 L44 24" strokeWidth={7} strokeLinecap="butt" />
-      <path d="M6 26 L14 40" strokeWidth={6} strokeLinecap="butt" />
-      <Head x={12} y={20} />
-      <path d="M13 24 L22 30 L33 19" strokeWidth={4.4} />
-      <path d="M30 22 L37 15" strokeWidth={5} />
+      {/* 押す板(斜めの太線)+ 背もたれに寄りかかった人。
+          器具だけにすると記号に見えるので、頭を大きく描いて人体図に戻す */}
+      <path d="M30 10 L44 24" strokeWidth={7} strokeLinecap="butt" />
+      <path d="M5 22 L13 38" strokeWidth={6} strokeLinecap="butt" />
+      <Head x={11} y={17} r={5} />
+      <path d="M14 22 L23 29 L34 20" strokeWidth={5} />
     </>
   ),
   ブルガリアンスクワット: (
@@ -214,13 +214,13 @@ const ICONS: Record<string, ReactNode> = {
   ),
   レッグカール: (
     <>
-      {/* 床線 + 水平な胴 + 直角に立ち上がる脛 の3要素だけ。
-          前脚を描くと四足動物に見えていた */}
-      <path d="M6 40 H42" strokeWidth={6} strokeLinecap="butt" />
-      <Head x={11} y={31} />
-      <path d="M15 32 H30" strokeWidth={5} />
-      <path d="M30 32 V12" strokeWidth={5} />
-      <path d="M25 12 H36" strokeWidth={5} />
+      {/* 台(太い板)にうつ伏せ + 脛を直角に立てる。
+          34pxでは「丸が1つあれば人」の手がかりが強いので頭を大きく出す */}
+      <path d="M8 38 H40" strokeWidth={7} strokeLinecap="butt" />
+      <Head x={11} y={28} r={5} />
+      <path d="M16 29 H31" strokeWidth={5} />
+      <path d="M31 29 V11" strokeWidth={5} />
+      <path d="M27 10 H37" strokeWidth={5} />
     </>
   ),
   カーフレイズ: (
@@ -265,12 +265,12 @@ const ICONS: Record<string, ReactNode> = {
   ),
   アップライトロー: (
     <>
-      <Head x={24} y={11} />
-      <path d="M24 15 V33 M24 33 L19 43 M24 33 L29 43" />
-      {/* 体の中心の短い横棒 + 肩より上に跳ね上げた肘。
-          サイドレイズ(長い水平な腕)と輪郭で区別する */}
-      <path d="M24 19 L13 12 M24 19 L35 12" strokeWidth={4.4} />
-      <Barbell y={23} x1={15} x2={33} r={4} />
+      <Head x={24} y={9} r={4.5} />
+      <path d="M24 14 V32 M24 32 L19 43 M24 32 L29 43" />
+      {/* 肘を左右へ大きく張り出したΛ形 + 中央の短い横棒。
+          中心に寄せると線が重なって黒い塊に潰れていた */}
+      <path d="M10 24 L17 15 L24 21 L31 15 L38 24" strokeWidth={4.4} />
+      <path d="M17 22 H31" strokeWidth={5} />
     </>
   ),
 
@@ -286,22 +286,21 @@ const ICONS: Record<string, ReactNode> = {
   ),
   ハンマーカール: (
     <>
-      {/* アームカールは片腕、ハンマーは両腕。持ち向きの差は実サイズで消えるため
-          要素数(腕の本数)で輪郭を変える */}
+      {/* 両腕だが、前腕を垂直に折りたたむ。肩種目(腕を水平に開く大の字)と輪郭を分ける */}
       <Head x={24} y={10} />
       <path d="M24 14 V32 M24 32 L20 43 M24 32 L28 43" />
-      <path d="M24 18 V26 L14 21 M24 18 V26 L34 21" />
-      <Dumbbell x={9} y={20} vertical s={0.85} />
-      <Dumbbell x={39} y={20} vertical s={0.85} />
+      <path d="M24 19 H14 V26 M24 19 H34 V26" strokeWidth={4.4} />
+      <Dumbbell x={14} y={30} vertical s={0.85} />
+      <Dumbbell x={34} y={30} vertical s={0.85} />
     </>
   ),
   トライセプスエクステンション: (
     <>
-      <Head x={22} y={20} />
-      <path d="M22 24 V36 M22 36 L18 44 M22 36 L26 44" />
-      {/* 頭の後ろへ回したダンベル */}
-      <path d="M23 22 L27 11" />
-      <Dumbbell x={31} y={8} />
+      <Head x={22} y={26} r={5} />
+      <path d="M22 31 V40 M22 40 L18 45 M22 40 L26 45" />
+      {/* 頭の丸より上へ大きく折り返した腕 = この種目だけの輪郭 */}
+      <path d="M18 22 L20 10 L32 13" strokeWidth={4.4} />
+      <Dumbbell x={35} y={15} s={0.9} />
     </>
   ),
   ディップス: (
